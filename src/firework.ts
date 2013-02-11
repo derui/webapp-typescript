@@ -39,22 +39,6 @@ game.onload = () => {
         return new GL.Base.Color(r, g, b);
     };
 
-    // var star = GL.Firework.Star.create(16, 16);
-    // star.setColor(rc());
-    // star.x = showCase.leftBound;
-    // star.y = 16;
-    // game.rootScene.addChild(star);
-    // world.add(new GL.Physics.BodyBinder(
-    //     star, GL.Firework.Star.createFixture(star, world.worldScale)));
-
-    // star = GL.Firework.Star.create(16, 16);
-    // star.setColor(rc());
-    // star.x = showCase.leftBound;
-    // star.y = 32;
-    // game.rootScene.addChild(star);
-    // world.add(new GL.Physics.BodyBinder(
-    //     star, GL.Firework.Star.createFixture(star, world.worldScale)));
-
     game.addEventListener("enterframe", (e:EnchantEvent) => {
         // 物理世界を更新する。
         world.step(1/60, 3, 3);

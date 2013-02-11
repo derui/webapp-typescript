@@ -21,20 +21,6 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
             var r = Math.floor(Math.random() * 256 % 255) + 1, g = Math.floor(Math.random() * 256 % 255) + 1, b = Math.floor(Math.random() * 256 % 255) + 1;
             return new GL.Base.Color(r, g, b);
         };
-        // var star = GL.Firework.Star.create(16, 16);
-        // star.setColor(rc());
-        // star.x = showCase.leftBound;
-        // star.y = 16;
-        // game.rootScene.addChild(star);
-        // world.add(new GL.Physics.BodyBinder(
-        //     star, GL.Firework.Star.createFixture(star, world.worldScale)));
-        // star = GL.Firework.Star.create(16, 16);
-        // star.setColor(rc());
-        // star.x = showCase.leftBound;
-        // star.y = 32;
-        // game.rootScene.addChild(star);
-        // world.add(new GL.Physics.BodyBinder(
-        //     star, GL.Firework.Star.createFixture(star, world.worldScale)));
         game.addEventListener("enterframe", function (e) {
             // 物理世界を更新する。
             world.step(1 / 60, 3, 3);
