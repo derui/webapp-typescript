@@ -10,9 +10,9 @@ var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
 
 enchant();
 
-var game = new Game(480, 640);
+var game = new Game(240, 320);
 
-game.fps = 60;
+game.fps = 15;
 
 game.onload = () => {
 

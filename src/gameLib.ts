@@ -217,12 +217,13 @@ export module Firework {
             this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
             this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
 
+            // ここで作成される剛体は、見ためのSpriteの倍に相当する剛体とする
             this.wallShapes.push(
-                this.createShape(scale, 0, 0, sideThick, this.height * 2));
+                this.createShape(scale, -sideThick, 0, sideThick * 2, this.height * 2));
             this.wallShapes.push(
-                this.createShape(scale, this.width - sideThick, 0, sideThick, this.height * 2));
+                this.createShape(scale, this.width - sideThick, 0, sideThick * 2, this.height * 2));
             this.wallShapes.push(
-                this.createShape(scale, 0, this.height - ground, this.width, ground));
+                this.createShape(scale, 0, this.height - ground, this.width * 2, ground * 2));
 
             this.leftBound = sideThick;
             this.rightBound = this.width - sideThick;
@@ -243,6 +244,7 @@ export module Firework {
             return p;
         }
 
+        // 壁に相当する剛体を作る。
         private createShape(scale:number, x:number, y:number, w:number, h:number) : Physics.BodyDefinition {
             var b2BodyDef = Box2D.Dynamics.b2BodyDef
             ,b2Body = Box2D.Dynamics.b2Body
