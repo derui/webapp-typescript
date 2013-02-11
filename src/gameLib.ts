@@ -9,21 +9,20 @@ export module Physics {
     export class World {
         private _world: B2World;
         private _worldScale: number = 100;
-        private _adapters: BodyAdapter[] = [];
+        private _binders: BodyBinder[] = [];
         get worldScale() :number {return this._worldScale;}
 
         constructor(gravity:B2Vec2, sleep=true) {
             this._world = new Box2D.Dynamics.b2World(gravity, sleep);
         }
 
-        // 渡されたBodyCombinableと、BodyDefinitionから、BodyAdapterを作成し、
-        // 内部に登録する。
-        add(def: BodyDefinition, target:BodyCombinable) : BodyAdapter {
-            var body = this._world.CreateBody(def.bodyDef);
-            body.CreateFixture(def.fixtureDef);
-            var adapter = new BodyAdapter(target, body);
-            this._adapters.push(adapter);
-            return adapter;
+        // 渡されたbinderを登録する。binderがまだbindされていない場合、
+        // 自身をbindの引数としてから登録する。
+        add(binder:BodyBinder) : void {
+            if (!binder.binded) {
+                binder.bind(this);
+            }
+            this._binders.push(binder);
         }
 
         // 指定したBodyDefに基づいたBodyを追加し、追加したBodyを返す。
@@ -34,8 +33,8 @@ export module Physics {
         }
 
         // 指定したtargetを持つadapterを削除する。
-        remove(target:BodyAdapter) : void {
-            this._adapters = this._adapters.filter((value, index, array) => {
+        remove(target:BodyBinder) : void {
+            this._binders = this._binders.filter((value, index, array) => {
                 array[index] != target
             });
         }
@@ -50,23 +49,38 @@ export module Physics {
 
             this._world.Step(rate, velocity, position);
             this._world.ClearForces();
-            this._adapters.forEach((value, index, ary) => {
+            this._binders.forEach((value, index, ary) => {
                 ary[index].reflectBodyState(this._worldScale);
             });
         }
     }
 
-    // Bodyと、BodyCombinable間のadapterとして働く。
-    // Worldによって更新されたBodyの状態を、BodyCombinableに反映する。
-    export class BodyAdapter {
-        private _target : BodyCombinable;
+    // BodyBindableとBodyをbindするクラス。
+    // 実際にはBodyDefinitionのみを渡し、body生成はbindメソッドの呼び出し時に、
+    // 渡されたworldについて行う。
+    // Worldによって更新されたBodyの状態を、BodyBindableに反映する。
+    export class BodyBinder {
+        // すでにbody生成が行なわれている場合はtrue
+        private _binded = false;
+        private _target : BodyBindable;
+        private _bodyDef : BodyDefinition;
         private _body  : B2Body;
-        get target() : BodyCombinable {return this._target;}
+        get binded() : bool {return this._binded;}
+        get target() : BodyBindable {return this._target;}
         get body(): B2Body {return this._body;}
 
-        constructor(target:BodyCombinable, body: B2Body) {
+        constructor(target:BodyBindable, bodyDef: BodyDefinition) {
             this._target = target;
-            this._body = body;
+            this._bodyDef = bodyDef;
+        }
+
+        // 渡されたbodyDefinitonからbodyを生成し、生成したBodyと
+        // オブジェクトを結びつける。
+        bind(world:World) :void {
+            if (!this._binded) {
+                this._body = world.addBody(this._bodyDef);
+                this._binded = true;
+            }
         }
 
         // Bodyの現在の位置をtargetに反映する。
@@ -76,8 +90,10 @@ export module Physics {
             var bodyPos = this._body.GetPosition()
             ,me = this._target;
 
-            me.x = bodyPos.x * worldScale;
-            me.y = bodyPos.y * worldScale;
+            // 剛体の座標は、物体の本来の位置と一致するように調整されているため、
+            // 反映の際には修正した値を設定する。
+            me.x = bodyPos.x * worldScale - me.width / 2;
+            me.y = bodyPos.y * worldScale - me.height / 2;
         }
     }
 
@@ -88,18 +104,21 @@ export module Physics {
     }
 
     // Bodyと描画する実体を接続するためのインターフェース。
-    // このインターフェースを実装したクラスは、BodyAdapterを利用して
+    // このインターフェースを実装したクラスは、BodyBinderを利用して
     // BodyControllerで管理することができる。
-    export interface BodyCombinable {
+    export interface BodyBindable {
         // Bodyと接続する物体の位置
         x:number;
         y:number;
+        // 物体のサイズ(full size)
+        width:number;
+        height:number;
     }
 }
 
 export module Firework {
 
-    export interface IStar extends EnchantSprite, Physics.BodyCombinable {
+    export interface IStar extends EnchantSprite, Physics.BodyBindable {
         setColor(color:Base.Color):void;
     }
 
@@ -107,6 +126,15 @@ export module Firework {
     export class Star {
         // enchant.jsから生成したクラスオブジェクトを保存する
         private static _singleton : IStar = null;
+
+        // 各starで共通するFixtureDefinition
+        private static _fixDef = () : B2FixtureDef => {
+            var fix = new Box2D.Dynamics.b2FixtureDef();
+            fix.density = 1.0;       // 密度
+            fix.friction = 1.5;      // 摩擦係数
+            fix.restitution = 0.2;   // 反発係数
+            return fix;
+        }();
 
         // enchant.jsのenchant.Class.createでの拡張は、TypeScriptのやりかたではサポート
         // できないため、一部本来のJavaScriptとして扱う必要がある。
@@ -118,9 +146,6 @@ export module Firework {
                 initialize : function () {
                     Sprite.call(this, width, height);
                     var surf = new Surface(width, height);
-                    surf.context.beginPath();
-                    surf.context.arc(width / 2, width / 2, width / 2, 0, Math.PI*2, true);
-                    surf.context.fill();
                     this.image = surf;
                     this.x = 0;
                     this.y = 0;
@@ -129,9 +154,16 @@ export module Firework {
                     this.scaleY = 1.0
                     this.setColor = (color:Base.Color) :void => {
                         var surf = new Surface(width, height);
+                        var r = width / 2;
+                        var grad = surf.context.createRadialGradient(
+                            r * 0.7, r * 0.5, 1,
+                            r, r, r);
+                        grad.addColorStop(0.0, "#fff");
+                        grad.addColorStop(0.50, color.toFillStyle());
+                        grad.addColorStop(1.0, "#000");
+                        surf.context.fillStyle = grad;
                         surf.context.beginPath();
-                        surf.context.fillStyle = color.toFillStyle();
-                        surf.context.arc(width / 2, width / 2, width / 2, 0, Math.PI*2, true);
+                        surf.context.arc(width / 2, width / 2, width / 2, 0, Math.PI*2, false);
                         surf.context.fill();
                         this.image = surf;
                         this.color = color;
@@ -142,15 +174,19 @@ export module Firework {
             return new this._singleton(width, height);
         }
 
-        static getStarImageName(num : number) :string {
-            var num = util.String.zeroPadding(num, 2);
-            return "image/glassbtn" + num + ".png";
+        // 渡されたstarに適合するbodyの設定を作成する。
+        private static createFixture(target:IStar, scale:number) : Physics.BodyDefinition {
+            var fixDef = this._fixDef;
+            var bodyDef = new Box2D.Dynamics.b2BodyDef();
+            bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
+            bodyDef.position.Set((target.x + target.width / 2) / scale,
+                                 (target.y + target.height / 2) / scale);
+            fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(target.width / 2 / scale);
+            return {bodyDef: bodyDef, fixtureDef :fixDef};
         }
     }
 
-    export interface IStarCase extends EnchantSprite, Physics.BodyCombinable {
-
-    }
+    export interface IStarCase extends EnchantSprite, Physics.BodyBindable {}
 
     export class StarCaseOption {
         // 左右両壁の幅
@@ -181,13 +217,19 @@ export module Firework {
             this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
             this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
 
-            this.wallShapes.push(this.createShape(scale, sideThick * 1.5, 0, sideThick / 2,
-                                                  this.height));
-            this.wallShapes.push(this.createShape(scale, this.width - sideThick * 1.5, 0, sideThick / 2,
-                                                  this.height));
-            this.wallShapes.push(this.createShape(scale,0, this.height - ground * 1.5, this.width, ground / 2));
+            this.wallShapes.push(
+                this.createShape(scale, 0, 0, sideThick, this.height * 2));
+            this.wallShapes.push(
+                this.createShape(scale, this.width - sideThick, 0, sideThick, this.height * 2));
+            this.wallShapes.push(
+                this.createShape(scale, 0, this.height - ground, this.width, ground));
+
+            this.leftBound = sideThick;
+            this.rightBound = this.width - sideThick;
+            this.groundBound = this.height - ground;
         }
 
+        // 壁に相当するspriteを作る
         private createWall(x:number, y:number, w:number, h:number) : EnchantSprite {
             var p = new Sprite(w, h);
             var surf = new Surface(w, h);
@@ -214,9 +256,9 @@ export module Firework {
 
             var bodyDef = new b2BodyDef();
             bodyDef.type = b2Body.b2_staticBody;
-            bodyDef.position.Set(x, y);
+            bodyDef.position.Set((x + w / 2) / scale, (y + h / 2) / scale);
             fixDef.shape = new b2PolygonShape();
-            fixDef.shape.SetAsBox(w, h);
+            fixDef.shape.SetAsBox(w / scale / 2, h / scale / 2);
             return {bodyDef : bodyDef, fixtureDef:fixDef};
         }
 

@@ -28,6 +28,7 @@ interface B2World {
     ClearForces() : void;
     Step(rate:number, velocity:number, position:number):void;
     SetDebugDraw(debug:B2DebugDraw): void;
+    DrawDebugData(): void;
 }
 
 interface B2Common extends Object {
