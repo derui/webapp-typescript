@@ -1,0 +1,79 @@
+open build/Common
+open configure/Configure
+open MyFunction
+
+.STATIC:
+	TSC_EXISTS = $(CheckProg tsc)
+	JAVA_EXISTS = $(CheckProg java)
+
+
+public.TSC = tsc
+public.JAVA = JAVA
+
+#
+# Various options
+#
+public.COMMENT_EMIT = true
+public.LAZY_COMMENT_EMIT = $`(if $(COMMENT_EMIT), -c, "")
+public.MODULE_KIND = commonjs
+public.LAZY_MODULE_KIND = $`(if $(not $(equal $(MODULE_KIND), $(EMPTY))), --module $(MODULE_KIND), "")
+public.TARGET_VERSION = ES5
+public.LAZY_TARGET_VERSION = $`(if $(not $(equal $(TARGET_VERSION), $(EMPTY))), --target $(TARGET_VERSION), "")
+public.OUTPUT_DECL = false
+public.LAZY_OUTPUT_DECL_FLAG = $`(if $(OUTPUT_DECL), --declaration, "")
+
+# Various for JavaScript minification.
+# Using YUI Compresser when minify some JavaScript files.
+public.DO_MINIFY = false
+public.YUI_PATH =
+public.MINIFIED_SUFFIX = -min
+
+public.Minify() =
+	if $(and $(DO_MINIFY) $(not $(file-exists $(YUI_PATH))))
+		eprintln(Minifing JavaScript requires $(YUI_PATH), but it was not found.)
+		eprintln(You need to check variable is YUI_PATH.)
+		exit 1
+	value $(JAVA) -jar $(YUI_PATH)
+
+# generic TypeScript compile function.
+public.Tsc() =
+    value $(TSC) $(LAZY_COMMENT_EMIT) $(LAZY_MODULE_KIND) $(LAZY_TARGET_VERSION)
+
+# Dependecies on TypeScript are automatic calculating by TypeScript compiler, so
+# this file does not include scanner for .ts files.
+%.js : %.ts
+	$(Tsc) $<
+
+# build rules
+# ======================================================================
+
+# Compile TypeScript files to JavaScript file.
+public.TSCompile(files, ?minify=false) =
+	# XXX: JYH: these variables should be marked private in 0.9.9
+	protected.TSFILES  = $(addsuffix .ts, $(files))
+	protected.JSFILES  = $(addsuffix .js, $(files))
+	protected.TARGET_FILES = $(JSFILES)
+
+	# Add some rules if you want to minify compiled JavaScript.
+	if $(minify)
+		section rule
+			protected.MINIFIED_JSFILES = $(addsuffx $(MINIFIED_SUFFIX).js, $(files))
+			TARGET_FILES += $(MINIFIED_JSFILES)
+			%$(MINIFIED_SUFFIX).js: %.js
+				$(Minify) $< -o $@
+				export
+			export
+		export
+
+	if $(OUTPUT_DECL)
+		section rule
+			%.d.ts : %.ts
+				$(Tsc) $(LAZY_OUTPUT_DECL_FLAG) $<
+				export
+			export
+		export
+
+	# Warning!
+	AutoClean()
+
+	return $(TARGET_FILES)
