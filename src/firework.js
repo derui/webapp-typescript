@@ -25,7 +25,8 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
             // 物理世界を更新する。
             world.step(1 / 60, 3, 3);
         });
-        var minX = showCase.leftBound, maxX = showCase.rightBound;
+        // 10フレーム毎に星を生成する。
+                var minX = showCase.leftBound, maxX = showCase.rightBound;
         game.rootScene.tl.then(function () {
             var star = GL.Firework.Star.create(16, 16);
             star.setColor(rc());
@@ -34,6 +35,12 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
             game.rootScene.addChild(star);
             world.add(new GL.Physics.BodyBinder(star, GL.Firework.Star.createFixture(star, world.worldScale)));
         }).delay(10).loop();
+        window.addEventListener("devicemotion", function (e) {
+            var x = e.accelerationIncludingGravity.x;
+            var y = e.accelerationIncludingGravity.y;
+            var z = e.accelerationIncludingGravity.z;
+            $("#textarea").html("" + x + ":" + y + ":" + z);
+        });
     };
     game.start();
 })

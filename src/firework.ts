@@ -12,6 +12,10 @@ enchant();
 
 var game = new Game(240, 320);
 
+interface DeviceMotionEvent extends Event {
+    accelerationIncludingGravity : {x:number; y:number; z:number;};
+}
+
 game.fps = 15;
 
 game.onload = () => {
@@ -44,6 +48,7 @@ game.onload = () => {
         world.step(1/60, 3, 3);
     });
 
+    // 10フレーム毎に星を生成する。
     var minX = showCase.leftBound, maxX = showCase.rightBound;
     game.rootScene.tl.then(() => {
         var star = GL.Firework.Star.create(16, 16);
@@ -54,6 +59,13 @@ game.onload = () => {
         world.add(new GL.Physics.BodyBinder(
             star, GL.Firework.Star.createFixture(star, world.worldScale)));
     }).delay(10).loop();
+
+    window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
+        var x = e.accelerationIncludingGravity.x;
+        var y = e.accelerationIncludingGravity.y;
+        var z = e.accelerationIncludingGravity.z;
+        $("#textarea").html("" + x + ":" + y + ":" + z);
+    });
 
 }
 
