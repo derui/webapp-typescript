@@ -79,6 +79,7 @@ declare interface EnchantSprite extends EnchantEntity {
 declare var enchant : {
     ():any;
     Class:any;
+    Label:any;
     Event: {
         A_BUTTON_DOWN : string;
         A_BUTTON_UP : string;
@@ -121,6 +122,7 @@ declare var enchant : {
 
     };
 };
+declare var Label: any;
 declare var Game: any;
 declare var Sprite: {new(width:number, height:number): EnchantSprite;};
 declare var Surface: {

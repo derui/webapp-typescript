@@ -60,21 +60,13 @@ game.onload = () => {
             star, GL.Firework.Star.createFixture(star, world.worldScale)));
     }).delay(10).loop();
 
+    var label = new Label();
     window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
         var x = e.accelerationIncludingGravity.x;
         var y = e.accelerationIncludingGravity.y;
         var z = e.accelerationIncludingGravity.z;
-        $("#textarea").html("" + x + ":" + y + ":" + z);
+        label.text = "" + x + ":" + y + ":" + z;
     });
-
 }
-    window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
-        var x = e.accelerationIncludingGravity.x;
-        var y = e.accelerationIncludingGravity.y;
-        var z = e.accelerationIncludingGravity.z;
-        $("#textarea").html("" + x + ":" + y + ":" + z);
-    });
 
-
-
-// game.start();
+game.start();

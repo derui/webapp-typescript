@@ -35,18 +35,13 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
             game.rootScene.addChild(star);
             world.add(new GL.Physics.BodyBinder(star, GL.Firework.Star.createFixture(star, world.worldScale)));
         }).delay(10).loop();
+        var label = new Label();
         window.addEventListener("devicemotion", function (e) {
             var x = e.accelerationIncludingGravity.x;
             var y = e.accelerationIncludingGravity.y;
             var z = e.accelerationIncludingGravity.z;
-            $("#textarea").html("" + x + ":" + y + ":" + z);
+            label.text = "" + x + ":" + y + ":" + z;
         });
     };
-    window.addEventListener("devicemotion", function (e) {
-        var x = e.accelerationIncludingGravity.x;
-        var y = e.accelerationIncludingGravity.y;
-        var z = e.accelerationIncludingGravity.z;
-        $("#textarea").html("" + x + ":" + y + ":" + z);
-    });
-    // game.start();
-    })
+    game.start();
+})
