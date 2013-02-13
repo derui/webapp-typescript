@@ -42,5 +42,11 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
             $("#textarea").html("" + x + ":" + y + ":" + z);
         });
     };
-    game.start();
-})
+    window.addEventListener("devicemotion", function (e) {
+        var x = e.accelerationIncludingGravity.x;
+        var y = e.accelerationIncludingGravity.y;
+        var z = e.accelerationIncludingGravity.z;
+        $("#textarea").html("" + x + ":" + y + ":" + z);
+    });
+    // game.start();
+    })
