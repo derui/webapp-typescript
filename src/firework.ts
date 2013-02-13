@@ -16,7 +16,7 @@ interface DeviceMotionEvent extends Event {
     accelerationIncludingGravity : {x:number; y:number; z:number;};
 }
 
-game.fps = 15;
+game.fps = 30;
 
 game.onload = () => {
 
@@ -60,15 +60,17 @@ game.onload = () => {
             star, GL.Firework.Star.createFixture(star, world.worldScale)));
     }).delay(10).loop();
 
-    var label = new Label();
-    game.rootScene.addChild(label);
-    label.x = 30;
-    label.text = "test";
     window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
         var x = e.accelerationIncludingGravity.x;
         var y = e.accelerationIncludingGravity.y;
         var z = e.accelerationIncludingGravity.z;
-        label.text = "" + x + ":" + y + ":" + z;
+
+        // xyの傾きを使う
+        var gravity = {x:0, y:0, z:9.8};
+        var gx = x / 100 * 9.8;
+        var gy = y / 100 * 9.8;
+        world.gravity = new Box2D.Common.Math.b2Vec2(gx, gy);
+
     });
 }
 

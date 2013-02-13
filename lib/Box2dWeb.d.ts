@@ -29,6 +29,8 @@ interface B2World {
     Step(rate:number, velocity:number, position:number):void;
     SetDebugDraw(debug:B2DebugDraw): void;
     DrawDebugData(): void;
+    GetGravity(): B2Vec2;
+    SetGravity(B2Vec2) :void;
 }
 
 interface B2Common extends Object {

@@ -12,6 +12,9 @@ export module Physics {
         private _binders: BodyBinder[] = [];
         get worldScale() :number {return this._worldScale;}
 
+        get gravity() :B2Vec2 {return this._world.GetGravity();}
+        set gravity(vec) {return this._world.SetGravity(vec);}
+
         constructor(gravity:B2Vec2, sleep=true) {
             this._world = new Box2D.Dynamics.b2World(gravity, sleep);
         }

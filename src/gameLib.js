@@ -16,6 +16,16 @@ define(["require", "exports"], function(require, exports) {
                 enumerable: true,
                 configurable: true
             });
+            Object.defineProperty(World.prototype, "gravity", {
+                get: function () {
+                    return this._world.GetGravity();
+                },
+                set: function (vec) {
+                    return this._world.SetGravity(vec);
+                },
+                enumerable: true,
+                configurable: true
+            });
             World.prototype.add = // 渡されたbinderを登録する。binderがまだbindされていない場合、
             // 自身をbindの引数としてから登録する。
             function (binder) {
