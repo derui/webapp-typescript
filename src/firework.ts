@@ -68,5 +68,13 @@ game.onload = () => {
     });
 
 }
+    window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
+        var x = e.accelerationIncludingGravity.x;
+        var y = e.accelerationIncludingGravity.y;
+        var z = e.accelerationIncludingGravity.z;
+        $("#textarea").html("" + x + ":" + y + ":" + z);
+    });
+
+
 
 game.start();
