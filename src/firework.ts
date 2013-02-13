@@ -77,4 +77,4 @@ game.onload = () => {
 
 
 
-game.start();
+// game.start();
