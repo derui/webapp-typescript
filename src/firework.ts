@@ -61,6 +61,9 @@ game.onload = () => {
     }).delay(10).loop();
 
     var label = new Label();
+    game.rootScene.addChild(label);
+    label.x = 30;
+    label.text = "test";
     window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
         var x = e.accelerationIncludingGravity.x;
         var y = e.accelerationIncludingGravity.y;
