@@ -6,7 +6,7 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     enchant();
     var game = new Game(240, 320);
-    game.fps = 30;
+    game.fps = 60;
     game.onload = function () {
         var b2Vec2 = Box2D.Common.Math.b2Vec2, b2BodyDef = Box2D.Dynamics.b2BodyDef, b2Body = Box2D.Dynamics.b2Body, b2FixtureDef = Box2D.Dynamics.b2FixtureDef, b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
         var showCase = new GL.Firework.StarCase(game.width, game.height);
@@ -23,7 +23,7 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
         };
         game.addEventListener("enterframe", function (e) {
             // 物理世界を更新する。
-            world.step(1 / 60, 3, 3);
+            world.step(1 / game.fps, 3, 3);
         });
         // 10フレーム毎に星を生成する。
                 var minX = showCase.leftBound, maxX = showCase.rightBound;
@@ -45,7 +45,7 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
                 y: 0,
                 z: 9.8
             };
-            var gx = x / 100 * 9.8;
+            var gx = -x / 100 * 9.8;
             var gy = y / 100 * 9.8;
             world.gravity = new Box2D.Common.Math.b2Vec2(gx, gy);
         });

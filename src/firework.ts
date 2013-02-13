@@ -16,7 +16,7 @@ interface DeviceMotionEvent extends Event {
     accelerationIncludingGravity : {x:number; y:number; z:number;};
 }
 
-game.fps = 30;
+game.fps = 60;
 
 game.onload = () => {
 
@@ -45,7 +45,7 @@ game.onload = () => {
 
     game.addEventListener("enterframe", (e:EnchantEvent) => {
         // 物理世界を更新する。
-        world.step(1/60, 3, 3);
+        world.step(1/game.fps, 3, 3);
     });
 
     // 10フレーム毎に星を生成する。
@@ -67,7 +67,7 @@ game.onload = () => {
 
         // xyの傾きを使う
         var gravity = {x:0, y:0, z:9.8};
-        var gx = x / 100 * 9.8;
+        var gx = -x / 100 * 9.8;
         var gy = y / 100 * 9.8;
         world.gravity = new Box2D.Common.Math.b2Vec2(gx, gy);
 
