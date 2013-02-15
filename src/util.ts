@@ -1,4 +1,8 @@
 
+export isNum(x:Object) : bool {
+    return x != null && x instanceof Number;
+}
+
 export class String {
 
     // zero padding.
@@ -16,13 +20,4 @@ export class String {
         }
     };
 
-}
-
-// Utitilies for number type.
-export class Number {
-
-    // Stringify number.
-    static toString(num:number) : string {
-        return num + "";
-    }
 }

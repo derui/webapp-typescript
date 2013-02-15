@@ -5,6 +5,14 @@ import util = module("util");
 
 enchant();
 
+export class Game {
+
+    constructor(public width:number, public height:number) {
+    }
+}
+
+
+
 export module Physics {
     export class World {
         private _world: B2World;
