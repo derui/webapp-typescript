@@ -1,7 +1,6 @@
 /// <reference path='../lib/jquery.d.ts' />
 /// <reference path='../lib/Box2dWeb.d.ts' />
 
-import firework = module("stage");
 import util = module("util");
 import GL = module("gameLib");
 var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
@@ -12,16 +11,16 @@ interface DeviceMotionEvent extends Event {
     accelerationIncludingGravity : {x:number; y:number; z:number;};
 }
 
-game.fps = 30;
+game.fps = 60;
 
-game.onload = (g) => {
+game.currentScene.onload = (g) => {
 
     var b2Vec2 = Box2D.Common.Math.b2Vec2;
 
     var showCase = new GL.Firework.StarCase(game.width, game.height);
     showCase.initialize(world.worldScale);
     showCase.walls.forEach((value) => {
-        game.addEntity(value);
+        game.currentScene.addEntity(value);
     });
     showCase.wallShapes.forEach((value, index, array) => {
         world.addBody(array[index]);
@@ -36,21 +35,21 @@ game.onload = (g) => {
 
     var rr = () => {
         var r = Math.floor(Math.random() * 16 % 16) + 1;
-        return Math.max(r, 8);
+        return Math.max(r, 12);
     };
 
     var minX = showCase.leftBound, maxX = showCase.rightBound;
     var count = 0;
     var star_count = 0;
-    game.onEnterFrame = (g) => {
+    game.currentScene.onenterframe = (g) => {
 
-        if (++count == 10) {
+        if (++count == 20) {
             count = 0;
             var star = new GL.Firework.Star(rr());
             star.setColor(rc());
             star.x = 100;
             star.y = 0;
-            g.addEntity(star);
+            g.currentScene.addEntity(star);
             world.add(new GL.Physics.BodyBinder(
                 star, GL.Firework.Star.createFixture(star, world.worldScale)));
             star_count++;

@@ -33,13 +33,8 @@ export class EntityBase implements Entity {
 
 export class RenderingEngine {
     private _shapeList: Renderable[];
-    private _context: Context;
 
-    constructor(id: string) {
-        var element = <HTMLCanvasElement>(document.getElementById(id));
-        if (element != null) {
-            this._context = new Context(element);
-        }
+    constructor() {
         this._shapeList = [];
     }
 
@@ -49,11 +44,20 @@ export class RenderingEngine {
         }
     }
 
-    renderEntities(): void {
-        this._context.clear();
+    removeEntity(entity: Entity): void {
+        if (entity != null) {
+            var indexOf = this._shapeList.indexOf(entity);
+            this._shapeList.splice(indexOf, 1);
+        }
+    }
 
-        for (var i = 0; i < this._shapeList.length; ++i) {
-            this._shapeList[i].render(this._context);
+    renderEntities(context: Context): void {
+        if (context != null) {
+            context.clear();
+
+            for (var i = 0; i < this._shapeList.length; ++i) {
+                this._shapeList[i].render(context);
+            }
         }
     }
 }

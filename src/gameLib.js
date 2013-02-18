@@ -7,6 +7,34 @@ define(["require", "exports", "animation"], function(require, exports, __animati
     
     var animation = __animation__;
 
+    // ゲーム内シーンの構成単位。各シーン間で、登録されているオブジェクトなどは独立している。
+    var Scene = (function () {
+        function Scene() {
+            // FPSにおける各フレームに入った段階で実行される関数
+            this.onenterframe = null;
+            this.onload = null;
+            this.ontouch = null;
+            this._engine = new animation.RenderingEngine();
+        }
+        Scene.prototype.addEntity = /**
+        * 管理対象のentityを追加する
+        */
+        function (entity) {
+            this._engine.addEntity(entity);
+        };
+        Scene.prototype.removeEntity = /**
+        * 指定されたEntityを削除する
+        */
+        function (entity) {
+            this._engine.removeEntity(entity);
+        };
+        Scene.prototype.render = // 指定されたcontextに対してレンダリングを行う
+        function (context) {
+            this._engine.renderEntities(context);
+        };
+        return Scene;
+    })();
+    exports.Scene = Scene;    
     // フレームベースでの更新処理を提供するゲームクラス。レンダリングが呼び出されるタイミング
     // についても、ここで指定したフレームのタイミングとなる
     var Game = (function () {
@@ -16,13 +44,9 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             var _this = this;
             // デフォルトのFPS
             this._fps = 30;
-            // FPSにおける各フレームに入った段階で実行される関数
-            this._onenterframe = null;
-            this._onload = null;
-            this._ontouch = null;
             this._isGameStarted = false;
-            // 内部で動作させるentity
-            this._entities = [];
+            // 各シーンのstack
+            this._sceneStack = [];
             // 内部で作成するcanvasのID
             this._gameCanvasId = "game-canvas";
             // レンダリング対象となるCanvasを追加する
@@ -30,19 +54,21 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             elem.id = this._gameCanvasId;
             elem.setAttribute("width", width.toString());
             elem.setAttribute("height", height.toString());
-            document.body.appendChild(elem);
             // タッチ/マウスでそれぞれ同一のハンドラを利用する
             elem.addEventListener("touchstart", function (e) {
-                if(_this._ontouch != null) {
-                    _this._ontouch(_this, e);
+                if(_this.currentScene.ontouch != null) {
+                    _this.currentScene.ontouch(_this, e);
                 }
             });
             elem.addEventListener("click", function (e) {
-                if(_this._ontouch != null) {
-                    _this._ontouch(_this, e);
+                if(_this.currentScene.ontouch != null) {
+                    _this.currentScene.ontouch(_this, e);
                 }
             });
-            this._engine = new animation.RenderingEngine(this._gameCanvasId);
+            var canvas = elem;
+            this._targetContext = new animation.Context(canvas);
+            document.body.appendChild(elem);
+            this._sceneStack.push(new Scene());
         }
         Object.defineProperty(Game.prototype, "fps", {
             get: function () {
@@ -54,23 +80,10 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             enumerable: true,
             configurable: true
         });
-        Object.defineProperty(Game.prototype, "onEnterFrame", {
-            set: function (f) {
-                this._onenterframe = f;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Game.prototype, "onload", {
-            set: function (f) {
-                this._onload = f;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Game.prototype, "ontouch", {
-            set: function (f) {
-                this._ontouch = f;
+        Object.defineProperty(Game.prototype, "currentScene", {
+            get: // Sceneスタックは、最低一つ必ず積まれている
+            function () {
+                return this._sceneStack[this._sceneStack.length - 1];
             },
             enumerable: true,
             configurable: true
@@ -83,12 +96,12 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             if(this._isGameStarted) {
                 return;
             }
-            if(this._onload) {
-                this._onload(this);
+            if(this.currentScene.onload && !this._isGameStarted) {
+                this.currentScene.onload(this);
             }
             this._intervalHandle = window.setInterval(function () {
-                if(_this._onenterframe) {
-                    _this._onenterframe(_this);
+                if(_this.currentScene.onenterframe) {
+                    _this.currentScene.onenterframe(_this);
                 }
                 _this.render();
             }, 1000 / this._fps);
@@ -102,22 +115,22 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             this._intervalHandle = null;
             this._isGameStarted = false;
         };
-        Game.prototype.addEntity = /**
-        * 管理対象のentityを追加する
-        */
-        function (entity) {
-            this._entities.push(entity);
-            this._engine.addEntity(entity);
+        Game.prototype.pushScene = function (scene) {
+            if(scene != null) {
+                this._sceneStack.push(scene);
+            }
         };
-        Game.prototype.removeEntity = /**
-        * 指定されたEntityを削除する
-        */
-        function (entity) {
-            var index = this._entities.indexOf(entity);
-            this._entities.splice(index, 1);
+        Game.prototype.popScene = // スタックからSceneをpopする。ただし、現在のsceneがrootである場合は、
+        // popされずにnullが返される
+        function () {
+            if(this._sceneStack.length == 1) {
+                return null;
+            } else {
+                return this._sceneStack.pop();
+            }
         };
         Game.prototype.render = function () {
-            this._engine.renderEntities();
+            this.currentScene.render(this._targetContext);
         };
         return Game;
     })();
@@ -293,7 +306,8 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             Star.prototype.setColor = function (color) {
                 this._color = color;
             };
-            Star.prototype.onreflect = function () {
+            Star.prototype.onreflect = // bodyからデータを反映させる際に呼び出されるコールバック
+            function () {
                 var body = this.body;
                 var count = 0;
                 var contacts = [];
@@ -317,15 +331,17 @@ define(["require", "exports", "animation"], function(require, exports, __animati
                 }
                 return true;
             };
-            Star.prototype.render = function (context) {
+            Star.prototype.render = // starをレンダリングする
+            function (context) {
                 var r = this.radius;
                 var grad = new animation.Gradietion.Radial(context);
                 grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
                 var info = this.body.GetUserData();
-                if(info.objectState != ObjectState.Connected) {
-                    grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).colorStop(1.0, "#000");
-                } else {
+                // 連結している場合は、灰色ベースの色にしてしまう
+                if(info.objectState == ObjectState.Connected) {
                     grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
+                } else {
+                    grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).colorStop(1.0, "#000");
                 }
                 this.gradient = grad;
                 _super.prototype.render.call(this, context);

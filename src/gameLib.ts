@@ -3,31 +3,85 @@
 import util = module("util");
 import animation = module("animation");
 
+export interface IScene {
+
+    onenterframe: (game: Game) => void;
+    onload: (game: Game) => void;
+    ontouch: (game: Game, event: MouseEvent) => void;
+
+    /**
+     * 管理対象のentityを追加する
+     */
+    addEntity(entity: animation.Entity): void;
+
+    /**
+     * 指定されたEntityを削除する
+     */
+    removeEntity(entity: animation.Entity): void;
+
+    // 指定されたcontextに対してレンダリングを行う
+    render(context: animation.Context): void;
+}
+
+// ゲーム内シーンの構成単位。各シーン間で、登録されているオブジェクトなどは独立している。
+export class Scene implements IScene {
+
+    // FPSにおける各フレームに入った段階で実行される関数
+    onenterframe: (game: Game) => void = null;
+    onload: (game: Game) => void = null;
+    ontouch: (game: Game, event: MouseEvent) => void = null;
+
+    // 各シーンをレンダリングするためのレンダリングエンジン
+    private _engine: animation.RenderingEngine;
+
+    constructor() {
+        this._engine = new animation.RenderingEngine();
+    }
+
+    /**
+     * 管理対象のentityを追加する
+     */
+    addEntity(entity: animation.Entity): void {
+        this._engine.addEntity(entity);
+    }
+
+    /**
+     * 指定されたEntityを削除する
+     */
+    removeEntity(entity: animation.Entity): void {
+        this._engine.removeEntity(entity);
+    }
+
+    // 指定されたcontextに対してレンダリングを行う
+    render(context: animation.Context): void {
+        this._engine.renderEntities(context);
+    }
+}
+
 // フレームベースでの更新処理を提供するゲームクラス。レンダリングが呼び出されるタイミング
 // についても、ここで指定したフレームのタイミングとなる
 export class Game {
 
     // デフォルトのFPS
     private _fps: number = 30;
-    // FPSにおける各フレームに入った段階で実行される関数
-    private _onenterframe: (game: Game) => void = null;
-    private _onload: (game: Game) => void = null;
-    private _ontouch: (game:Game, event:MouseEvent) => void = null;
+
     private _intervalHandle: number;
     private _isGameStarted: bool = false;
 
-    // 内部で動作させるentity
-    private _entities: animation.Entity[] = [];
+    // レンダリング対象のコンテキスト
+    private _targetContext: animation.Context;
+
+    // 各シーンのstack
+    private _sceneStack: IScene[] = [];
 
     // 内部で作成するcanvasのID
     private _gameCanvasId: string = "game-canvas";
-    private _engine: animation.RenderingEngine;
+
     get fps(): number { return this._fps; }
     set fps(f: number) { this._fps = f; }
-    set onEnterFrame(f: (game: Game) => void ) { this._onenterframe = f; }
-    set onload(f: (game: Game) => void ) { this._onload = f;}
 
-    set ontouch(f:(game:Game,event:MouseEvent) => void) {this._ontouch = f;}
+    // Sceneスタックは、最低一つ必ず積まれている
+    get currentScene(): IScene { return this._sceneStack[this._sceneStack.length - 1]; }
 
     constructor(public width: number, public height: number) {
 
@@ -36,20 +90,24 @@ export class Game {
         elem.id = this._gameCanvasId;
         elem.setAttribute("width", width.toString());
         elem.setAttribute("height", height.toString());
-        document.body.appendChild(elem);
+
         // タッチ/マウスでそれぞれ同一のハンドラを利用する
-        elem.addEventListener("touchstart", (e:MouseEvent) => {
-            if (this._ontouch != null) {
-                this._ontouch(this, e);
+        elem.addEventListener("touchstart", (e: MouseEvent) => {
+            if (this.currentScene.ontouch != null) {
+                this.currentScene.ontouch(this, e);
             }
         });
-        elem.addEventListener("click", (e:MouseEvent) => {
-            if (this._ontouch != null) {
-                this._ontouch(this, e);
+        elem.addEventListener("click", (e: MouseEvent) => {
+            if (this.currentScene.ontouch != null) {
+                this.currentScene.ontouch(this, e);
             }
         });
 
-        this._engine = new animation.RenderingEngine(this._gameCanvasId);
+        var canvas = <HTMLCanvasElement>elem;
+        this._targetContext = new animation.Context(canvas);
+        document.body.appendChild(elem);
+
+        this._sceneStack.push(new Scene());
     }
 
     /**
@@ -60,13 +118,13 @@ export class Game {
             return;
         }
 
-        if (this._onload) {
-            this._onload(this);
+        if (this.currentScene.onload && !this._isGameStarted) {
+            this.currentScene.onload(this);
         }
 
         this._intervalHandle = window.setInterval(() => {
-            if (this._onenterframe) {
-                this._onenterframe(this);
+            if (this.currentScene.onenterframe) {
+                this.currentScene.onenterframe(this);
             }
 
             this.render();
@@ -84,24 +142,24 @@ export class Game {
         this._isGameStarted = false;
     }
 
-    /**
-     * 管理対象のentityを追加する
-     */
-    addEntity(entity: animation.Entity): void {
-        this._entities.push(entity);
-        this._engine.addEntity(entity);
+    pushScene(scene: IScene): void {
+        if (scene != null) {
+            this._sceneStack.push(scene);
+        }
     }
 
-    /**
-     * 指定されたEntityを削除する
-     */
-    removeEntity(entity: animation.Entity): void {
-        var index = this._entities.indexOf(entity);
-        this._entities.splice(index, 1);
+    // スタックからSceneをpopする。ただし、現在のsceneがrootである場合は、
+    // popされずにnullが返される
+    popScene(): IScene {
+        if (this._sceneStack.length == 1) {
+            return null;
+        } else {
+            return this._sceneStack.pop();
+        }
     }
 
     private render() : void {
-        this._engine.renderEntities();
+        this.currentScene.render(this._targetContext);
     }
 }
 
@@ -284,6 +342,7 @@ export module Firework {
             this._color = color;
         }
 
+        // bodyからデータを反映させる際に呼び出されるコールバック
         onreflect() : bool {
             var body = this.body;
             var count = 0;
@@ -310,16 +369,19 @@ export module Firework {
             return true;
         }
 
+        // starをレンダリングする
         render(context: animation.Context): void {
             var r = this.radius;
             var grad = new animation.Gradietion.Radial(context);
             grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
-            var info : ObjectInfo = this.body.GetUserData();
-            if (info.objectState != ObjectState.Connected) {
+            var info: ObjectInfo = this.body.GetUserData();
+
+            // 連結している場合は、灰色ベースの色にしてしまう
+            if (info.objectState == ObjectState.Connected) {
+                grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
+            } else {
                 grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).
                     colorStop(1.0, "#000");
-            } else {
-                grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
             }
             this.gradient = grad;
             super.render(context);

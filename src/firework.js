@@ -1,17 +1,16 @@
 define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
     
-    
     var GL = __GL__;
 
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     var game = new GL.Game(240, 320);
-    game.fps = 30;
-    game.onload = function (g) {
+    game.fps = 60;
+    game.currentScene.onload = function (g) {
         var b2Vec2 = Box2D.Common.Math.b2Vec2;
         var showCase = new GL.Firework.StarCase(game.width, game.height);
         showCase.initialize(world.worldScale);
         showCase.walls.forEach(function (value) {
-            game.addEntity(value);
+            game.currentScene.addEntity(value);
         });
         showCase.wallShapes.forEach(function (value, index, array) {
             world.addBody(array[index]);
@@ -22,19 +21,19 @@ define(["require", "exports", "gameLib"], function(require, exports, __GL__) {
         };
         var rr = function () {
             var r = Math.floor(Math.random() * 16 % 16) + 1;
-            return Math.max(r, 8);
+            return Math.max(r, 12);
         };
         var minX = showCase.leftBound, maxX = showCase.rightBound;
         var count = 0;
         var star_count = 0;
-        game.onEnterFrame = function (g) {
-            if(++count == 10) {
+        game.currentScene.onenterframe = function (g) {
+            if(++count == 20) {
                 count = 0;
                 var star = new GL.Firework.Star(rr());
                 star.setColor(rc());
                 star.x = 100;
                 star.y = 0;
-                g.addEntity(star);
+                g.currentScene.addEntity(star);
                 world.add(new GL.Physics.BodyBinder(star, GL.Firework.Star.createFixture(star, world.worldScale)));
                 star_count++;
             }

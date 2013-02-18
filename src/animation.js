@@ -21,11 +21,7 @@ define(["require", "exports"], function(require, exports) {
     })();
     exports.EntityBase = EntityBase;    
     var RenderingEngine = (function () {
-        function RenderingEngine(id) {
-            var element = (document.getElementById(id));
-            if(element != null) {
-                this._context = new Context(element);
-            }
+        function RenderingEngine() {
             this._shapeList = [];
         }
         RenderingEngine.prototype.addEntity = function (entity) {
@@ -33,10 +29,18 @@ define(["require", "exports"], function(require, exports) {
                 this._shapeList.push(entity);
             }
         };
-        RenderingEngine.prototype.renderEntities = function () {
-            this._context.clear();
-            for(var i = 0; i < this._shapeList.length; ++i) {
-                this._shapeList[i].render(this._context);
+        RenderingEngine.prototype.removeEntity = function (entity) {
+            if(entity != null) {
+                var indexOf = this._shapeList.indexOf(entity);
+                this._shapeList.splice(indexOf, 1);
+            }
+        };
+        RenderingEngine.prototype.renderEntities = function (context) {
+            if(context != null) {
+                context.clear();
+                for(var i = 0; i < this._shapeList.length; ++i) {
+                    this._shapeList[i].render(context);
+                }
             }
         };
         return RenderingEngine;
