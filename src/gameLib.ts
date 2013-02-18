@@ -1,17 +1,109 @@
 /// <reference path='../lib/Box2dWeb.d.ts' />
-/// <reference path='../lib/enchant.d.ts' />
 
 import util = module("util");
+import animation = module("animation");
 
-enchant();
-
+// フレームベースでの更新処理を提供するゲームクラス。レンダリングが呼び出されるタイミング
+// についても、ここで指定したフレームのタイミングとなる
 export class Game {
 
-    constructor(public width:number, public height:number) {
+    // デフォルトのFPS
+    private _fps: number = 30;
+    // FPSにおける各フレームに入った段階で実行される関数
+    private _onenterframe: (game: Game) => void = null;
+    private _onload: (game: Game) => void = null;
+    private _ontouch: (game:Game, event:MouseEvent) => void = null;
+    private _intervalHandle: number;
+    private _isGameStarted: bool = false;
+
+    // 内部で動作させるentity
+    private _entities: animation.Entity[] = [];
+
+    // 内部で作成するcanvasのID
+    private _gameCanvasId: string = "game-canvas";
+    private _engine: animation.RenderingEngine;
+    get fps(): number { return this._fps; }
+    set fps(f: number) { this._fps = f; }
+    set onEnterFrame(f: (game: Game) => void ) { this._onenterframe = f; }
+    set onload(f: (game: Game) => void ) { this._onload = f;}
+
+    set ontouch(f:(game:Game,event:MouseEvent) => void) {this._ontouch = f;}
+
+    constructor(public width: number, public height: number) {
+
+        // レンダリング対象となるCanvasを追加する
+        var elem = document.createElement("canvas");
+        elem.id = this._gameCanvasId;
+        elem.setAttribute("width", width.toString());
+        elem.setAttribute("height", height.toString());
+        document.body.appendChild(elem);
+        // タッチ/マウスでそれぞれ同一のハンドラを利用する
+        elem.addEventListener("touchstart", (e:MouseEvent) => {
+            if (this._ontouch != null) {
+                this._ontouch(this, e);
+            }
+        });
+        elem.addEventListener("click", (e:MouseEvent) => {
+            if (this._ontouch != null) {
+                this._ontouch(this, e);
+            }
+        });
+
+        this._engine = new animation.RenderingEngine(this._gameCanvasId);
+    }
+
+    /**
+     * ゲームループを開始する。
+     */
+    start(): void {
+        if (this._isGameStarted) {
+            return;
+        }
+
+        if (this._onload) {
+            this._onload(this);
+        }
+
+        this._intervalHandle = window.setInterval(() => {
+            if (this._onenterframe) {
+                this._onenterframe(this);
+            }
+
+            this.render();
+
+        }, 1000 / this._fps);
+        this._isGameStarted = true;
+    }
+
+    /**
+     * 開始されたゲームループを停止する。
+     */
+    stop(): void {
+        window.clearInterval(this._intervalHandle);
+        this._intervalHandle = null;
+        this._isGameStarted = false;
+    }
+
+    /**
+     * 管理対象のentityを追加する
+     */
+    addEntity(entity: animation.Entity): void {
+        this._entities.push(entity);
+        this._engine.addEntity(entity);
+    }
+
+    /**
+     * 指定されたEntityを削除する
+     */
+    removeEntity(entity: animation.Entity): void {
+        var index = this._entities.indexOf(entity);
+        this._entities.splice(index, 1);
+    }
+
+    private render() : void {
+        this._engine.renderEntities();
     }
 }
-
-
 
 export module Physics {
     export class World {
@@ -90,6 +182,7 @@ export module Physics {
         bind(world:World) :void {
             if (!this._binded) {
                 this._body = world.addBody(this._bodyDef);
+                this._target.body = this._body;
                 this._binded = true;
             }
         }
@@ -101,10 +194,12 @@ export module Physics {
             var bodyPos = this._body.GetPosition()
             ,me = this._target;
 
-            // 剛体の座標は、物体の本来の位置と一致するように調整されているため、
-            // 反映の際には修正した値を設定する。
-            me.x = bodyPos.x * worldScale - me.width / 2;
-            me.y = bodyPos.y * worldScale - me.height / 2;
+            if (me.onreflect()) {
+                // 剛体の座標は、物体の本来の位置と一致するように調整されているため、
+                // 反映の際には修正した値を設定する。
+                me.x = bodyPos.x * worldScale - me.width / 2;
+                me.y = bodyPos.y * worldScale - me.height / 2;
+            }
         }
     }
 
@@ -124,80 +219,127 @@ export module Physics {
         // 物体のサイズ(full size)
         width:number;
         height:number;
+        body:B2Body;
+
+        // reflectBodyState実行時に実行される処理。
+        // trueが返された場合には、本来のreflectBodyStateの処理も行われる。
+        onreflect() : bool;
     }
 }
 
 export module Firework {
 
-    export interface IStar extends EnchantSprite, Physics.BodyBindable {
+    export interface ObjectBase {
+        // オブジェクトが有効であるかを返す。
+        // isValidがfalseを返す場合、このオブジェクトはそのフレームで取り除かれる。
+        isValid() : bool;
+    }
+
+    enum ObjectType {
+        Wall,
+        Star
+    }
+
+    enum ObjectState {
+        Connected,
+        Free,
+        PrepareLaunch,
+        Launch
+    }
+
+    // B2BodyのuserDataに登録する情報
+    class ObjectInfo {
+        objectState : ObjectState;
+        constructor(public type:ObjectType) {this.objectState = ObjectState.Free;}
+    }
+
+    export interface IStar extends animation.Entity, Physics.BodyBindable, ObjectBase {
         setColor(color:Base.Color):void;
     }
 
-    // Starを生成するためのファクトリ
-    export class Star {
-        // enchant.jsから生成したクラスオブジェクトを保存する
-        private static _singleton : IStar = null;
+    // メインのオブジェクトとなるStar
+    export class Star extends animation.Shapes.Circle implements IStar {
+        body:B2Body;
 
         // 各starで共通するFixtureDefinition
-        private static _fixDef = () : B2FixtureDef => {
+        static private _fixDef = () : B2FixtureDef => {
             var fix = new Box2D.Dynamics.b2FixtureDef();
             fix.density = 1.0;       // 密度
             fix.friction = 1.5;      // 摩擦係数
             fix.restitution = 0.2;   // 反発係数
             return fix;
-        }();
+        } ();
 
-        // enchant.jsのenchant.Class.createでの拡張は、TypeScriptのやりかたではサポート
-        // できないため、一部本来のJavaScriptとして扱う必要がある。
-        static create(width:number,height:number) : IStar {
-            if (_singleton != null) {
-                return new this._singleton(width, height);
-            }
-            var p : any = enchant.Class.create(Sprite, {
-                initialize : function () {
-                    Sprite.call(this, width, height);
-                    var surf = new Surface(width, height);
-                    this.image = surf;
-                    this.x = 0;
-                    this.y = 0;
-                    this.frame = 1;
-                    this.scaleX = 1.0;
-                    this.scaleY = 1.0
-                    this.setColor = (color:Base.Color) :void => {
-                        var surf = new Surface(width, height);
-                        var r = width / 2;
-                        var grad = surf.context.createRadialGradient(
-                            r * 0.7, r * 0.5, 1,
-                            r, r, r);
-                        grad.addColorStop(0.0, "#fff");
-                        grad.addColorStop(0.50, color.toFillStyle());
-                        grad.addColorStop(1.0, "#000");
-                        surf.context.fillStyle = grad;
-                        surf.context.beginPath();
-                        surf.context.arc(width / 2, width / 2, width / 2, 0, Math.PI*2, false);
-                        surf.context.fill();
-                        this.image = surf;
-                        this.color = color;
-                    };
+        private _color: Base.Color = new Base.Color();
+
+        constructor(radius:number) {
+            super(radius);
+        }
+
+        isValid() : bool {
+            return true;
+        }
+
+        setColor(color: Base.Color): void {
+            this._color = color;
+        }
+
+        onreflect() : bool {
+            var body = this.body;
+            var count = 0;
+            var contacts = [];
+            for (var n = body.GetContactList(); n != null;
+                 n = n.next) {
+                if (n.contact.IsTouching()) {
+                    contacts.push(n.other);
                 }
-            });
-            this._singleton = <IStar>p;
-            return new this._singleton(width, height);
+            }
+            // 星同士が4つ以上隣接したら、staticに変更する。
+            if (contacts.length >= 4) {
+                contacts.forEach((e) => {
+                    var info : ObjectInfo = e.GetUserData();
+                    info.objectState = ObjectState.Connected;
+                    if (body != e && info.type == ObjectType.Star) {
+                        e.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
+                    }
+                });
+                body.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
+                var info : ObjectInfo = body.GetUserData();
+                info.objectState = ObjectState.Connected;
+            }
+            return true;
+        }
+
+        render(context: animation.Context): void {
+            var r = this.radius;
+            var grad = new animation.Gradietion.Radial(context);
+            grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
+            var info : ObjectInfo = this.body.GetUserData();
+            if (info.objectState != ObjectState.Connected) {
+                grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).
+                    colorStop(1.0, "#000");
+            } else {
+                grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
+            }
+            this.gradient = grad;
+            super.render(context);
         }
 
         // 渡されたstarに適合するbodyの設定を作成する。
-        private static createFixture(target:IStar, scale:number) : Physics.BodyDefinition {
+        public static createFixture(target:IStar, scale:number) : Physics.BodyDefinition {
             var fixDef = this._fixDef;
             var bodyDef = new Box2D.Dynamics.b2BodyDef();
             bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
+            bodyDef.userData = new ObjectInfo(ObjectType.Star);
             bodyDef.position.Set((target.x + target.width / 2) / scale,
                                  (target.y + target.height / 2) / scale);
+            bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
             fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(target.width / 2 / scale);
             return {bodyDef: bodyDef, fixtureDef :fixDef};
         }
     }
 
-    export interface IStarCase extends EnchantSprite, Physics.BodyBindable {}
+    export interface IStarCase extends animation.Entity, Physics.BodyBindable {}
 
     export class StarCaseOption {
         // 左右両壁の幅
@@ -216,7 +358,7 @@ export module Firework {
         // 地面の境界位置
         groundBound:number;
 
-        walls : EnchantSprite[] = [];
+        walls : animation.Entity[] = [];
         wallShapes : Physics.BodyDefinition[] = [];
 
         constructor(public width:number, public height: number) {}
@@ -242,16 +384,10 @@ export module Firework {
         }
 
         // 壁に相当するspriteを作る
-        private createWall(x:number, y:number, w:number, h:number) : EnchantSprite {
-            var p = new Sprite(w, h);
-            var surf = new Surface(w, h);
-            surf.context.beginPath();
-            surf.context.fillRect(0, 0, w, h);
-            surf.context.fill();
-            p.image = surf;
+        private createWall(x:number, y:number, w:number, h:number) : animation.Entity {
+            var p = new animation.Shapes.Box(w, h);
             p.x = x;
             p.y = y;
-            p.frame = 1;
             return p;
         }
 
@@ -270,6 +406,7 @@ export module Firework {
             var bodyDef = new b2BodyDef();
             bodyDef.type = b2Body.b2_staticBody;
             bodyDef.position.Set((x + w / 2) / scale, (y + h / 2) / scale);
+            bodyDef.userData = new ObjectInfo(ObjectType.Wall);
             fixDef.shape = new b2PolygonShape();
             fixDef.shape.SetAsBox(w / scale / 2, h / scale / 2);
             return {bodyDef : bodyDef, fixtureDef:fixDef};

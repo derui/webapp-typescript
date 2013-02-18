@@ -2,7 +2,7 @@
 import util = module('util');
 
 // レンダリング可能なオブジェクトが実装するインターフェース
-interface Renderable  {
+export interface Renderable  {
     render(context:Context) : void;
 }
 
@@ -16,42 +16,44 @@ export interface Entity extends Renderable {
     height: number;
 
     // レンダリングを行う順序を指定する。0が最も奥で、値が増えるほど前になる。
-    zIndex: number = 0;
+    zIndex: number;
 }
 
 // 描画可能なオブジェクトの基底クラス
 export class EntityBase implements Entity {
-    x:number = 0;
-    y:number = 0;
-    width:number = 0;
-    height:number = 0;
-    zIndex:number = 0;
+    x: number = 0;
+    y: number = 0;
+    width: number = 0;
+    height: number = 0;
+    zIndex: number = 0;
 
     // このクラスのレンダリングは何も行わない
-    render(context:Context) : void {}
+    render(context: Context): void { }
 }
 
 export class RenderingEngine {
-    private _shapeList:Shapes.Renderable[]
+    private _shapeList: Renderable[];
+    private _context: Context;
 
-    constructor(id:String) {
-        var element = <HTMLCanvasElement>document.getElementById(id);
+    constructor(id: string) {
+        var element = <HTMLCanvasElement>(document.getElementById(id));
         if (element != null) {
             this._context = new Context(element);
         }
         this._shapeList = [];
     }
 
-    addEntity(entity:Entity) : void {
+    addEntity(entity: Entity): void {
         if (entity != null) {
             this._shapeList.push(entity);
         }
     }
 
-    renderEntities() : void {
-        context.clear();
-        for (var entity : this._shapeList) {
-            entity.render(this._context);
+    renderEntities(): void {
+        this._context.clear();
+
+        for (var i = 0; i < this._shapeList.length; ++i) {
+            this._shapeList[i].render(this._context);
         }
     }
 }
@@ -60,9 +62,7 @@ export class RenderingEngine {
 // singletonなクラス
 export class Anima {
 
-    static private _instance:Anima = null;
-
-    private constructor() {}
+    static private _instance: Anima = null;
 
     private static getInstance(): Anima {
         if (this._instance == null) {
@@ -76,24 +76,152 @@ export class Anima {
 export class Context {
 
     // レンダリング先のコンテキスト
-    private _context:CanvasRenderingContext2D;
+    private _context: CanvasRenderingContext2D;
+    private _width: number = 0;
+    private _height: number = 0;
 
-    public get context() : CanvasRenderingContext2D { return this._context;}
+    get context(): CanvasRenderingContext2D { return this._context; }
+    get width(): number { return this._width; }
+    get height(): number { return this._height; }
 
     contextEnabled() : bool {return this._context != null;}
 
     constructor(canvas:HTMLCanvasElement) {
         if (canvas) {
             this._context = canvas.getContext("2d");
+            this._width = canvas.width;
+            this._height = canvas.height;
         } else {
             this._context = null;
         }
     }
 
     clear() : void {
-        var width = this._context.width,
-        height = this._context.heigit;
-        this._context.clearRect(0, 0, width, height);
+        this._context.clearRect(0, 0, this._width, this._height);
+    }
+}
+
+export class InvalidCanvasException {
+
+    constructor(public message:string) {
+
+    }
+}
+
+// CanvasGradientをラッピングしたクラスを提供するモジュール
+export module Gradietion {
+
+    // グラディエーションクラスのインターフェース
+    export interface Gradient {
+        colorStop(offset: number, color: string): Gradient;
+        raw(): CanvasGradient;
+    }
+
+    // 線形グラディエーションクラス
+    export class Linear implements Gradient {
+        private _linearGradient: CanvasGradient;
+        private _context: Context;
+        private _fromX: number;
+        private _fromY: number;
+        private _toX: number;
+        private _toY: number;
+
+        constructor(context: Context) {
+            if (context.contextEnabled) {
+                this._context = context;
+            }
+        }
+
+        from(x: number, y: number): Linear {
+            this._fromX = x;
+            this._fromY = y;
+            return this;
+        }
+
+        to(x: number, y: number): Linear {
+            this._toX = x;
+            this._toY = y;
+            return this;
+        }
+
+        colorStop(offset: number, color: string): Linear {
+            if (this._context == null) {
+                throw new InvalidCanvasException("Invalid canvas");
+            }
+
+            if (this._linearGradient == null) {
+                this._linearGradient = this._context.context.createLinearGradient(this._fromX, this._fromY,
+                                                                                  this._toX, this._toY);
+            }
+
+            this._linearGradient.addColorStop(offset, color);
+            return this;
+        }
+
+        raw(): CanvasGradient { return this._linearGradient; }
+
+    }
+
+    // 円形グラディエーションクラス
+    export class Radial {
+        private _radialGradient: CanvasGradient;
+        private _context: Context;
+        private _fromX: number;
+        private _fromY: number;
+        private _fromR: number;
+        private _toX: number;
+        private _toY: number;
+        private _toR: number;
+
+        constructor(context: Context) {
+            if (context.contextEnabled) {
+                this._context = context;
+            }
+        }
+
+        from(x: number, y: number, r:number): Radial {
+            this._fromX = x;
+            this._fromY = y;
+            this._fromR = r;
+            return this;
+        }
+
+        to(x: number, y: number, r:number): Radial {
+            this._toX = x;
+            this._toY = y;
+            this._toR = r;
+            return this;
+        }
+
+        colorStop(offset: number, color: string): Radial {
+            if (this._context == null) {
+                throw new InvalidCanvasException("Invalid canvas");
+            }
+
+            if (this._radialGradient == null) {
+                this._radialGradient = this._context.context.createRadialGradient(this._fromX, this._fromY,
+                                                                                  this._fromR, this._toX, this._toY, this._toR);
+            }
+
+            this._radialGradient.addColorStop(offset, color);
+            return this;
+        }
+
+        raw(): CanvasGradient { return this._radialGradient; }
+    }
+}
+
+module Util {
+
+    // save〜restoreをラップしたクラスを提供する
+    export class ContextWrapper {
+        constructor(context: Context, callback: (context: Context) => any) {
+            if (callback != null && context != null) {
+                context.context.save();
+                callback(context);
+                context.context.restore();
+            }
+        }
     }
 }
 
@@ -103,17 +231,59 @@ export module Shapes {
     // 円
     export class Circle extends EntityBase {
 
-        constructor(public radius:number) {
+        private _gradient: Gradietion.Gradient;
+
+        set gradient(g: Gradietion.Gradient) { this._gradient = g;}
+
+        constructor(public radius: number) {
+            super();
             this.width = radius * 2;
             this.height = radius * 2;
         }
 
-        render(context:Context) : void {
-            var ctx = context.context;
-            ctx.beginPath();
-            ctx.arcTo(this.x +  this.radius, this.y + this.radius,
-                      this.x + this.radius, this.y, Math.PI * 2, false);
-            ctx.closePath();
+        render(context: Context): void {
+
+                var ctx = context.context;
+
+                // グラディエーションが設定可能である場合は設定する
+                if (this._gradient) {
+                    ctx.fillStyle = this._gradient.raw();
+                }
+
+                ctx.beginPath();
+                ctx.arc(this.x + this.radius, this.y + this.radius,
+                        this.radius, 0, Math.PI * 2, true);
+
+                ctx.fill();
+        }
+    }
+
+    // 矩形
+    export class Box extends EntityBase {
+
+        private _gradient: Gradietion.Gradient;
+        set gradient(g: Gradietion.Gradient) { this._gradient = g;}
+        isFill : bool = true;
+
+        constructor(public width: number, public height: number) {
+            super();
+        }
+
+        render(context: Context): void {
+            new Util.ContextWrapper(context, (context) => {
+
+                var ctx = context.context;
+                // グラディエーションが設定可能である場合は設定する
+                if (this._gradient) {
+                    ctx.fillStyle = this._gradient.raw();
+                }
+
+                if (this.isFill) {
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.rect(this.x, this.y, this.width, this.height);
+                }
+            });
         }
     }
 }

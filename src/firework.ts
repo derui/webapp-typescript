@@ -1,36 +1,27 @@
 /// <reference path='../lib/jquery.d.ts' />
 /// <reference path='../lib/Box2dWeb.d.ts' />
-/// <reference path='../lib/enchant.d.ts' />
-/// <reference path='gameLib.ts' />
 
 import firework = module("stage");
 import util = module("util");
 import GL = module("gameLib");
 var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
 
-enchant();
-
-var game = new Game(240, 320);
+var game = new GL.Game(240, 320);
 
 interface DeviceMotionEvent extends Event {
     accelerationIncludingGravity : {x:number; y:number; z:number;};
 }
 
-game.fps = 60;
+game.fps = 30;
 
-game.onload = () => {
+game.onload = (g) => {
 
-    var b2Vec2 = Box2D.Common.Math.b2Vec2
-    ,	b2BodyDef = Box2D.Dynamics.b2BodyDef
-    ,	b2Body = Box2D.Dynamics.b2Body
-    ,	b2FixtureDef = Box2D.Dynamics.b2FixtureDef
-    ,   b2CircleShape = Box2D.Collision.Shapes.b2CircleShape;
-
+    var b2Vec2 = Box2D.Common.Math.b2Vec2;
 
     var showCase = new GL.Firework.StarCase(game.width, game.height);
     showCase.initialize(world.worldScale);
-    showCase.walls.forEach((value, index, array) => {
-        game.rootScene.addChild(array[index]);
+    showCase.walls.forEach((value) => {
+        game.addEntity(value);
     });
     showCase.wallShapes.forEach((value, index, array) => {
         world.addBody(array[index]);
@@ -43,22 +34,43 @@ game.onload = () => {
         return new GL.Base.Color(r, g, b);
     };
 
-    game.addEventListener("enterframe", (e:EnchantEvent) => {
+    var rr = () => {
+        var r = Math.floor(Math.random() * 16 % 16) + 1;
+        return Math.max(r, 8);
+    };
+
+    var minX = showCase.leftBound, maxX = showCase.rightBound;
+    var count = 0;
+    var star_count = 0;
+    game.onEnterFrame = (g) => {
+
+        if (++count == 10) {
+            count = 0;
+            var star = new GL.Firework.Star(rr());
+            star.setColor(rc());
+            star.x = 100;
+            star.y = 0;
+            g.addEntity(star);
+            world.add(new GL.Physics.BodyBinder(
+                star, GL.Firework.Star.createFixture(star, world.worldScale)));
+            star_count++;
+        }
+        document.getElementById("textarea").innerHTML = "current fps : " + star_count;
+
         // 物理世界を更新する。
         world.step(1/game.fps, 3, 3);
-    });
+    };
 
     // 10フレーム毎に星を生成する。
-    var minX = showCase.leftBound, maxX = showCase.rightBound;
-    game.rootScene.tl.then(() => {
-        var star = GL.Firework.Star.create(16, 16);
-        star.setColor(rc());
-        star.x = Math.max(maxX * Math.random(), minX);
-        star.y = 0;
-        game.rootScene.addChild(star);
-        world.add(new GL.Physics.BodyBinder(
-            star, GL.Firework.Star.createFixture(star, world.worldScale)));
-    }).delay(10).loop();
+    // game.rootScene.tl.then(() => {
+    //     var star = new GL.Firework.Star(16, 16);
+    //     star.setColor(rc());
+    //     star.x = Math.max(maxX * Math.random(), minX);
+    //     star.y = 0;
+    //     game.rootScene.addChild(star);
+    //     world.add(new GL.Physics.BodyBinder(
+    //         star, GL.Firework.Star.createFixture(star, world.worldScale)));
+    // }).delay(10).loop();
 
     window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
         var x = e.accelerationIncludingGravity.x;

@@ -1,5 +1,5 @@
 
-export isNum(x:Object) : bool {
+function isNum(x:Object) : bool {
     return x != null && x instanceof Number;
 }
 
@@ -7,7 +7,7 @@ export class String {
 
     // zero padding.
     static zeroPadding(num:number, size:number) : string {
-        var numStr = Number.toString(num);
+        var numStr = num.toString();
         if (numStr.length >= size) {
             return numStr;
         } else if (size <= 0) {

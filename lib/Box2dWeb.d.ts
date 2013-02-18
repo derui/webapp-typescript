@@ -122,6 +122,7 @@ interface B2Fixture {
 }
 
 interface B2Body extends Object {
+    m_contactList:B2Contact[];
     b2_staticBody:number;
     b2_dynamicBody:number;
     b2_kinematicBody:number;
@@ -193,6 +194,8 @@ declare interface B2Transform {
 declare interface B2BodyDef extends Object {
     type: number;
     position: B2Vec2;
+    userData: any;
+    angularVelocity:number;
 }
 
 declare interface B2Dynamics extends Object {
