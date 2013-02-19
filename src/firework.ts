@@ -32,15 +32,15 @@ class ObjectInfo {
 // Starで利用されている各種情報
 module StarUtil {
 
-    export enum StarSize {
-        Large = 16,
-        Medium = 14,
-        Small = 12,
-        VerySmall = 10
+    enum StarSize {
+        Large,
+        Medium,
+        Small,
+        VerySmall
     }
 
     // StarSizeからランダムでいずれかを取得する
-    export function getSomeType(): StarSize {
+    function getSomeType(): StarSize {
         switch (Math.floor(Math.random() * 4)) {
             case 0: return StarSize.Large;
             case 1: return StarSize.Medium;
@@ -48,17 +48,25 @@ module StarUtil {
             case 3: return StarSize.VerySmall;
         }
     }
-}
 
+    export function getSomeSize(): number {
+        switch (getSomeType()) {
+            case StarSize.Large: return 16;
+            case StarSize.Medium: return 14;
+            case StarSize.Small: return 12;
+            case StarSize.VerySmall: return 10;
+        }
+    }
+}
 
 export interface IStar extends animation.Entity, gl.Physics.BodyBindable, ObjectBase {
     setColor(color: gl.Base.Color): void;
 }
 
 // メインのオブジェクトとなるStar
-export class Star extends animation.Shapes.Circle implements IStar {
+export class Star extends animation.EntityBase implements IStar {
     body: B2Body;
-    private _sizeType: StarUtil.StarSize;
+    private _circle: animation.Shapes.Circle;
 
     // 各starで共通するFixtureDefinition
     static private _fixDef = (): B2FixtureDef => {
@@ -71,9 +79,19 @@ export class Star extends animation.Shapes.Circle implements IStar {
 
     private _color: gl.Base.Color = new gl.Base.Color();
 
+    // 必要なパラメータを同期させる
+    private syncParam(): void {
+        this._circle.x = this.x;
+        this._circle.y = this.y;
+        this.width = this._circle.width;
+        this.height = this._circle.height;
+        this._circle.zIndex = this.zIndex;
+    }
+
     constructor() {
-        super(StarUtil.getSomeType());
-        this._sizeType = this.radius;
+        super();
+        this._circle = new animation.Shapes.Circle(StarUtil.getSomeSize());
+        this.syncParam();
     }
 
     isValid(): bool {
@@ -113,7 +131,7 @@ export class Star extends animation.Shapes.Circle implements IStar {
 
     // starをレンダリングする。レンダリング処理自体は、circleのrenderに任せる。
     render(context: animation.Context): void {
-        var r = this._sizeType;
+        var r = this._circle.radius;
         var grad = new animation.Gradietion.Radial(context);
         grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
         var info: ObjectInfo = this.body.GetUserData();
@@ -125,8 +143,9 @@ export class Star extends animation.Shapes.Circle implements IStar {
             grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).
                 colorStop(1.0, "#000");
         }
-        this.gradient = grad;
-        super.render(context);
+        this.syncParam();
+        this._circle.gradient = grad;
+        this._circle.render(context);
     }
 
     // 渡されたstarに適合するbodyの設定を作成する。
@@ -139,6 +158,7 @@ export class Star extends animation.Shapes.Circle implements IStar {
                              (target.y + target.height / 2) / scale);
         bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
         fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(target.width / 2 / scale);
+        console.log(target.width / 2);
         return { bodyDef: bodyDef, fixtureDef: fixDef };
     }
 }

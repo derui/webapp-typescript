@@ -21,18 +21,20 @@ export interface Entity extends Renderable {
 
 // 描画可能なオブジェクトの基底クラス
 export class EntityBase implements Entity {
-    x: number = 0;
-    y: number = 0;
-    width: number = 0;
-    height: number = 0;
-    zIndex: number = 0;
+    // それぞれの値について、初期値を設定する責任は、このクラスを継承した先のクラスにある
+
+    constructor(public x = 0, public y = 0,
+        public width = 0, public height = 0, public zIndex = 0) {
+    }
 
     // このクラスのレンダリングは何も行わない
     render(context: Context): void { }
 }
 
 export class RenderingEngine {
-    private _shapeList: Renderable[];
+    private _shapeList: Entity[];
+
+    get entities(): Entity[] { return this._shapeList; }
 
     constructor() {
         this._shapeList = [];
@@ -241,8 +243,11 @@ export module Shapes {
 
         constructor(public radius: number) {
             super();
+            this.x = 0;
+            this.y = 0;
             this.width = radius * 2;
             this.height = radius * 2;
+            this.zIndex = 0;
         }
 
         render(context: Context): void {
@@ -271,6 +276,9 @@ export module Shapes {
 
         constructor(public width: number, public height: number) {
             super();
+            this.x = 0;
+            this.y = 0;
+            this.zIndex = 0;
         }
 
         render(context: Context): void {

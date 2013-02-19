@@ -9,6 +9,8 @@ export interface IScene {
     onload: (game: Game) => void;
     ontouch: (game: Game, event: MouseEvent) => void;
 
+    entities: animation.Entity[];
+
     /**
      * 管理対象のentityを追加する
      */
@@ -33,6 +35,8 @@ export class Scene implements IScene {
 
     // 各シーンをレンダリングするためのレンダリングエンジン
     private _engine: animation.RenderingEngine;
+
+    get entities(): animation.Entity[] { return this._engine.entities; }
 
     constructor() {
         this._engine = new animation.RenderingEngine();
