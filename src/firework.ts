@@ -1,88 +1,219 @@
-/// <reference path='../lib/jquery.d.ts' />
-/// <reference path='../lib/Box2dWeb.d.ts' />
 
 import util = module("util");
-import GL = module("gameLib");
-var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
+import animation = module("animation");
+import gl = module("gameLib");
 
-var game = new GL.Game(240, 320);
-
-interface DeviceMotionEvent extends Event {
-    accelerationIncludingGravity : {x:number; y:number; z:number;};
+export interface ObjectBase {
+    // ƒIƒuƒWƒFƒNƒg‚ª—LŒø‚Å‚ ‚é‚©‚ğ•Ô‚·B
+    // isValid‚ªfalse‚ğ•Ô‚·ê‡A‚±‚ÌƒIƒuƒWƒFƒNƒg‚Í‚»‚ÌƒtƒŒ[ƒ€‚Åæ‚èœ‚©‚ê‚éB
+    isValid(): bool;
 }
 
-game.fps = 60;
+// ƒIƒuƒWƒFƒNƒg‚Ìí•Ê‚ğ•\‚·
+enum ObjectType {
+    Wall,
+    Star
+}
 
-game.currentScene.onload = (g) => {
+// ƒIƒuƒWƒFƒNƒg‚Ìó‘Ô‚ğ•\‚·
+enum ObjectState {
+    Connected,
+    Free,
+    PrepareLaunch,
+    Launch
+}
 
-    var b2Vec2 = Box2D.Common.Math.b2Vec2;
+// B2Body‚ÌuserData‚É“o˜^‚·‚éî•ñ
+class ObjectInfo {
+    objectState: ObjectState;
+    constructor(public type: ObjectType) { this.objectState = ObjectState.Free; }
+}
 
-    var showCase = new GL.Firework.StarCase(game.width, game.height);
-    showCase.initialize(world.worldScale);
-    showCase.walls.forEach((value) => {
-        game.currentScene.addEntity(value);
-    });
-    showCase.wallShapes.forEach((value, index, array) => {
-        world.addBody(array[index]);
-    });
+// Star‚Å—˜—p‚³‚ê‚Ä‚¢‚éŠeíî•ñ
+module StarUtil {
 
-    var rc = () => {
-        var r = Math.floor(Math.random() * 256 % 255) + 1,
-        g = Math.floor(Math.random() * 256 % 255) + 1,
-        b = Math.floor(Math.random() * 256 % 255) + 1;
-        return new GL.Base.Color(r, g, b);
-    };
+    export enum StarSize {
+        Large = 16,
+        Medium = 14,
+        Small = 12,
+        VerySmall = 10
+    }
 
-    var rr = () => {
-        var r = Math.floor(Math.random() * 16 % 16) + 1;
-        return Math.max(r, 12);
-    };
-
-    var minX = showCase.leftBound, maxX = showCase.rightBound;
-    var count = 0;
-    var star_count = 0;
-    game.currentScene.onenterframe = (g) => {
-
-        if (++count == 20) {
-            count = 0;
-            var star = new GL.Firework.Star(rr());
-            star.setColor(rc());
-            star.x = 100;
-            star.y = 0;
-            g.currentScene.addEntity(star);
-            world.add(new GL.Physics.BodyBinder(
-                star, GL.Firework.Star.createFixture(star, world.worldScale)));
-            star_count++;
+    // StarSize‚©‚çƒ‰ƒ“ƒ_ƒ€‚Å‚¢‚¸‚ê‚©‚ğæ“¾‚·‚é
+    export function getSomeType(): StarSize {
+        switch (Math.floor(Math.random() * 4)) {
+            case 0: return StarSize.Large;
+            case 1: return StarSize.Medium;
+            case 2: return StarSize.Small;
+            case 3: return StarSize.VerySmall;
         }
-        document.getElementById("textarea").innerHTML = "current fps : " + star_count;
-
-        // ç‰©ç†ä¸–ç•Œã‚’æ›´æ–°ã™ã‚‹ã€‚
-        world.step(1/game.fps, 3, 3);
-    };
-
-    // 10ãƒ•ãƒ¬ãƒ¼ãƒ æ¯ã«æ˜Ÿã‚’ç”Ÿæˆã™ã‚‹ã€‚
-    // game.rootScene.tl.then(() => {
-    //     var star = new GL.Firework.Star(16, 16);
-    //     star.setColor(rc());
-    //     star.x = Math.max(maxX * Math.random(), minX);
-    //     star.y = 0;
-    //     game.rootScene.addChild(star);
-    //     world.add(new GL.Physics.BodyBinder(
-    //         star, GL.Firework.Star.createFixture(star, world.worldScale)));
-    // }).delay(10).loop();
-
-    window.addEventListener("devicemotion", (e:DeviceMotionEvent) => {
-        var x = e.accelerationIncludingGravity.x;
-        var y = e.accelerationIncludingGravity.y;
-        var z = e.accelerationIncludingGravity.z;
-
-        // xyã®å‚¾ãã‚’ä½¿ã†
-        var gravity = {x:0, y:0, z:9.8};
-        var gx = -x / 100 * 9.8;
-        var gy = y / 100 * 9.8;
-        world.gravity = new Box2D.Common.Math.b2Vec2(gx, gy);
-
-    });
+    }
 }
 
-game.start();
+
+export interface IStar extends animation.Entity, gl.Physics.BodyBindable, ObjectBase {
+    setColor(color: gl.Base.Color): void;
+}
+
+// ƒƒCƒ“‚ÌƒIƒuƒWƒFƒNƒg‚Æ‚È‚éStar
+export class Star extends animation.Shapes.Circle implements IStar {
+    body: B2Body;
+    private _sizeType: StarUtil.StarSize;
+
+    // Šestar‚Å‹¤’Ê‚·‚éFixtureDefinition
+    static private _fixDef = (): B2FixtureDef => {
+        var fix = new Box2D.Dynamics.b2FixtureDef();
+        fix.density = 1.0;       // –§“x
+        fix.friction = 1.5;      // –€CŒW”
+        fix.restitution = 0.2;   // ”½”­ŒW”
+        return fix;
+    } ();
+
+    private _color: gl.Base.Color = new gl.Base.Color();
+
+    constructor() {
+        super(StarUtil.getSomeType());
+        this._sizeType = this.radius;
+    }
+
+    isValid(): bool {
+        return true;
+    }
+
+    setColor(color: gl.Base.Color): void {
+        this._color = color;
+    }
+
+    // body‚©‚çƒf[ƒ^‚ğ”½‰f‚³‚¹‚éÛ‚ÉŒÄ‚Ño‚³‚ê‚éƒR[ƒ‹ƒoƒbƒN
+    onreflect(): bool {
+        var body = this.body;
+        var count = 0;
+        var contacts = [];
+        for (var n = body.GetContactList(); n != null;
+             n = n.next) {
+            if (n.contact.IsTouching()) {
+                contacts.push(n.other);
+            }
+        }
+        // ¯“¯m‚ª4‚ÂˆÈã—×Ú‚µ‚½‚çAstatic‚É•ÏX‚·‚éB
+        if (contacts.length >= 4) {
+            contacts.forEach((e) => {
+                var info: ObjectInfo = e.GetUserData();
+                info.objectState = ObjectState.Connected;
+                if (body != e && info.type == ObjectType.Star) {
+                    e.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
+                }
+            });
+            body.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
+            var info: ObjectInfo = body.GetUserData();
+            info.objectState = ObjectState.Connected;
+        }
+        return true;
+    }
+
+    // star‚ğƒŒƒ“ƒ_ƒŠƒ“ƒO‚·‚éBƒŒƒ“ƒ_ƒŠƒ“ƒOˆ—©‘Ì‚ÍAcircle‚Ìrender‚É”C‚¹‚éB
+    render(context: animation.Context): void {
+        var r = this._sizeType;
+        var grad = new animation.Gradietion.Radial(context);
+        grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
+        var info: ObjectInfo = this.body.GetUserData();
+
+        // ˜AŒ‹‚µ‚Ä‚¢‚éê‡‚ÍAŠDFƒx[ƒX‚ÌF‚É‚µ‚Ä‚µ‚Ü‚¤
+        if (info.objectState == ObjectState.Connected) {
+            grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
+        } else {
+            grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).
+                colorStop(1.0, "#000");
+        }
+        this.gradient = grad;
+        super.render(context);
+    }
+
+    // “n‚³‚ê‚½star‚É“K‡‚·‚ébody‚Ìİ’è‚ğì¬‚·‚éB
+    static createFixture(target: IStar, scale: number): gl.Physics.BodyDefinition {
+        var fixDef = this._fixDef;
+        var bodyDef = new Box2D.Dynamics.b2BodyDef();
+        bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
+        bodyDef.userData = new ObjectInfo(ObjectType.Star);
+        bodyDef.position.Set((target.x + target.width / 2) / scale,
+                             (target.y + target.height / 2) / scale);
+        bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
+        fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(target.width / 2 / scale);
+        return { bodyDef: bodyDef, fixtureDef: fixDef };
+    }
+}
+
+export interface IStarCase extends animation.Entity, gl.Physics.BodyBindable {}
+
+export class StarCaseOption {
+    // ¶‰E—¼•Ç‚Ì•
+    sideWallThickness: number = 10;
+
+    // ’n–Ê‚ÌŒú‚İ
+    groundThickness: number = 10;
+}
+
+// width / height‚É‚ ‚Ä‚Í‚Ü‚éƒIƒuƒWƒFƒNƒg‚ğ¶¬‚·‚éB
+export class StarCase {
+    // ¶‘¤‚Ì‹«ŠEˆÊ’u
+    leftBound: number;
+    // ‰E‘¤‚Ì‹«ŠEˆÊ’u
+    rightBound: number;
+    // ’n–Ê‚Ì‹«ŠEˆÊ’u
+    groundBound: number;
+
+    walls: animation.Entity[] = [];
+    wallShapes: gl.Physics.BodyDefinition[] = [];
+
+    constructor(public width: number, public height: number) { }
+
+    initialize(scale: number, option? = new StarCaseOption): void {
+        var sideThick = option.sideWallThickness,
+        ground = option.groundThickness;
+        this.walls.push(this.createWall(0, 0, sideThick, this.height));
+        this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
+        this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
+
+        // ‚±‚±‚Åì¬‚³‚ê‚é„‘Ì‚ÍAŒ©‚½‚ß‚ÌSprite‚Ì”{‚É‘Š“–‚·‚é„‘Ì‚Æ‚·‚é
+        this.wallShapes.push(
+            this.createShape(scale, -sideThick, 0, sideThick * 2, this.height * 2));
+        this.wallShapes.push(
+            this.createShape(scale, this.width - sideThick, 0, sideThick * 2, this.height * 2));
+        this.wallShapes.push(
+            this.createShape(scale, 0, this.height - ground, this.width * 2, ground * 2));
+
+        this.leftBound = sideThick;
+        this.rightBound = this.width - sideThick;
+        this.groundBound = this.height - ground;
+    }
+
+    // •Ç‚É‘Š“–‚·‚ésprite‚ğì‚é
+    private createWall(x: number, y: number, w: number, h: number): animation.Entity {
+        var p = new animation.Shapes.Box(w, h);
+        p.x = x;
+        p.y = y;
+        return p;
+    }
+
+    // •Ç‚É‘Š“–‚·‚é„‘Ì‚ğì‚éB
+    private createShape(scale: number, x: number, y: number, w: number, h: number): gl.Physics.BodyDefinition {
+        var b2BodyDef = Box2D.Dynamics.b2BodyDef
+        , b2Body = Box2D.Dynamics.b2Body
+        , b2FixtureDef = Box2D.Dynamics.b2FixtureDef
+        , b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
+
+        var fixDef = new b2FixtureDef;
+        fixDef.density = 1.0;
+        fixDef.friction = 1.5;
+        fixDef.restitution = 0.2;
+
+        var bodyDef = new b2BodyDef();
+        bodyDef.type = b2Body.b2_staticBody;
+        bodyDef.position.Set((x + w / 2) / scale, (y + h / 2) / scale);
+        bodyDef.userData = new ObjectInfo(ObjectType.Wall);
+        fixDef.shape = new b2PolygonShape();
+        fixDef.shape.SetAsBox(w / scale / 2, h / scale / 2);
+        return { bodyDef: bodyDef, fixtureDef: fixDef };
+    }
+
+}

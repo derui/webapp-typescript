@@ -2,16 +2,16 @@
 import util = module('util');
 
 // レンダリング可能なオブジェクトが実装するインターフェース
-export interface Renderable  {
-    render(context:Context) : void;
+export interface Renderable {
+    render(context: Context): void;
 }
 
 // 描画可能なオブジェクトのインターフェース。
 export interface Entity extends Renderable {
     // 図形における基準となる2D座標。
     // この座標はすべての図形において、図形全体を包む矩形の左上座標を表す
-    x : number;
-    y : number;
+    x: number;
+    y: number;
     width: number;
     height: number;
 
@@ -88,9 +88,9 @@ export class Context {
     get width(): number { return this._width; }
     get height(): number { return this._height; }
 
-    contextEnabled() : bool {return this._context != null;}
+    contextEnabled(): bool { return this._context != null; }
 
-    constructor(canvas:HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement) {
         if (canvas) {
             this._context = canvas.getContext("2d");
             this._width = canvas.width;
@@ -100,14 +100,14 @@ export class Context {
         }
     }
 
-    clear() : void {
+    clear(): void {
         this._context.clearRect(0, 0, this._width, this._height);
     }
 }
 
 export class InvalidCanvasException {
 
-    constructor(public message:string) {
+    constructor(public message: string) {
 
     }
 }
@@ -183,14 +183,14 @@ export module Gradietion {
             }
         }
 
-        from(x: number, y: number, r:number): Radial {
+        from(x: number, y: number, r: number): Radial {
             this._fromX = x;
             this._fromY = y;
             this._fromR = r;
             return this;
         }
 
-        to(x: number, y: number, r:number): Radial {
+        to(x: number, y: number, r: number): Radial {
             this._toX = x;
             this._toY = y;
             this._toR = r;
@@ -237,7 +237,7 @@ export module Shapes {
 
         private _gradient: Gradietion.Gradient;
 
-        set gradient(g: Gradietion.Gradient) { this._gradient = g;}
+        set gradient(g: Gradietion.Gradient) { this._gradient = g; }
 
         constructor(public radius: number) {
             super();
@@ -247,18 +247,18 @@ export module Shapes {
 
         render(context: Context): void {
 
-                var ctx = context.context;
+            var ctx = context.context;
 
-                // グラディエーションが設定可能である場合は設定する
-                if (this._gradient) {
-                    ctx.fillStyle = this._gradient.raw();
-                }
+            // グラディエーションが設定可能である場合は設定する
+            if (this._gradient) {
+                ctx.fillStyle = this._gradient.raw();
+            }
 
-                ctx.beginPath();
-                ctx.arc(this.x + this.radius, this.y + this.radius,
-                        this.radius, 0, Math.PI * 2, true);
+            ctx.beginPath();
+            ctx.arc(this.x + this.radius, this.y + this.radius,
+                    this.radius, 0, Math.PI * 2, true);
 
-                ctx.fill();
+            ctx.fill();
         }
     }
 
@@ -266,8 +266,8 @@ export module Shapes {
     export class Box extends EntityBase {
 
         private _gradient: Gradietion.Gradient;
-        set gradient(g: Gradietion.Gradient) { this._gradient = g;}
-        isFill : bool = true;
+        set gradient(g: Gradietion.Gradient) { this._gradient = g; }
+        isFill: bool = true;
 
         constructor(public width: number, public height: number) {
             super();
