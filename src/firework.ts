@@ -59,12 +59,12 @@ module StarUtil {
     }
 }
 
-export interface IStar extends animation.Entity, gl.Physics.BodyBindable, ObjectBase {
-    setColor(color: gl.Base.Color): void;
+export interface IStar extends gl.Entity, gl.Physics.BodyBindable, ObjectBase {
+    setColor(color: animation.Common.Color): void;
 }
 
 // メインのオブジェクトとなるStar
-export class Star extends animation.EntityBase implements IStar {
+export class Star extends gl.BaseClasses.EntityImpl implements IStar {
     body: B2Body;
     private _circle: animation.Shapes.Circle;
 
@@ -77,7 +77,7 @@ export class Star extends animation.EntityBase implements IStar {
         return fix;
     } ();
 
-    private _color: gl.Base.Color = new gl.Base.Color();
+    private _color: animation.Common.Color = new animation.Common.Color();
 
     // 必要なパラメータを同期させる
     private syncParam(): void {
@@ -98,7 +98,7 @@ export class Star extends animation.EntityBase implements IStar {
         return true;
     }
 
-    setColor(color: gl.Base.Color): void {
+    setColor(color: animation.Common.Color): void {
         this._color = color;
     }
 
@@ -163,7 +163,7 @@ export class Star extends animation.EntityBase implements IStar {
     }
 }
 
-export interface IStarCase extends animation.Entity, gl.Physics.BodyBindable {}
+export interface IStarCase extends gl.Entity, gl.Physics.BodyBindable {}
 
 export class StarCaseOption {
     // 左右両壁の幅
@@ -182,7 +182,7 @@ export class StarCase {
     // 地面の境界位置
     groundBound: number;
 
-    walls: animation.Entity[] = [];
+    walls: gl.Entity[] = [];
     wallShapes: gl.Physics.BodyDefinition[] = [];
 
     constructor(public width: number, public height: number) { }
@@ -208,11 +208,11 @@ export class StarCase {
     }
 
     // 壁に相当するspriteを作る
-    private createWall(x: number, y: number, w: number, h: number): animation.Entity {
+    private createWall(x: number, y: number, w: number, h: number): gl.Entity {
         var p = new animation.Shapes.Box(w, h);
         p.x = x;
         p.y = y;
-        return p;
+        return new gl.BaseClasses.EntityProxy(p);
     }
 
     // 壁に相当する剛体を作る。

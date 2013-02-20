@@ -15,7 +15,7 @@ export module Common {
 
     export class Rect {
 
-        get center() : Math.Vector2D {return this.calcCenter();}
+        get center() : Vector.Vector2D {return this.calcCenter();}
         get width() : number {return this.left - this.right;}
         get height() : number {return this.bottom - this.top;}
 
@@ -24,10 +24,10 @@ export module Common {
             this.center = this.calcCenter();
         }
 
-        private calcCenter() : Vector2D {
+        private calcCenter(): Vector.Vector2D {
             var width = this.right - this.left,
             height = this.bottom - this.top;
-            return new Math.Vector2D(this.left + width / 2,
+            return new Vector.Vector2D(this.left + width / 2,
                                      this.top + height / 2);
         }
 
@@ -39,7 +39,7 @@ export module Common {
         }
     }
 
-    module Math {
+    export module Vector {
 
         // 二次元ベクトルを返す。基本的にチェーンメソッドで繋げられるようになっている。
         export class Vector2D {
@@ -99,7 +99,7 @@ export interface Renderable {
 }
 
 // 描画可能なオブジェクトのインターフェース
-export interface Symbolize extends Rendarable {
+export interface Symbolize extends Renderable {
     // 図形における基準となる2D座標。
     // この座標はすべての図形において、図形全体を包む矩形の左上座標を表す
     x: number;
@@ -120,7 +120,7 @@ export interface Symbolize extends Rendarable {
 }
 
 // 描画可能なオブジェクトの基底クラス
-export class SymbolBase implements Symbolize {
+export class Symbol implements Symbolize {
     // それぞれの値について、初期値を設定する責任は、このクラスを継承した先のクラスにある
 
     constructor(public x = 0, public y = 0,
@@ -142,41 +142,11 @@ export class SymbolBase implements Symbolize {
     }
 }
 
-export class RenderingEngine {
-    private _shapeList: Symbolize[];
-
-    get entities(): Symbolize[] { return this._shapeList; }
-
-    constructor() {
-        this._shapeList = [];
-    }
-
-    addSymbolize(entity: Symbolize): void {
-        if (entity != null) {
-            this._shapeList.push(entity);
-        }
-    }
-
-    removeSymbolize(entity: Symbolize): void {
-        if (entity != null) {
-            var indexOf = this._shapeList.indexOf(entity);
-            this._shapeList.splice(indexOf, 1);
-        }
-    }
-
-    renderEntities(context: Context): void {
-        if (context != null) {
-            context.clear();
-
-            for (var i = 0; i < this._shapeList.length; ++i) {
-                this._shapeList[i].render(context);
-            }
-        }
-    }
-}
-
 // レンダリングターゲットに対して、各種のアニメーションを管理するための
 // singletonなクラス
+// アニメーションを実行したいオブジェクトは、Animaから生成されるアニメーションオブジェクト
+// を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
+// 一極管理することができる。
 export class Anima {
 
     static private _instance: Anima = null;
@@ -346,7 +316,7 @@ module Util {
 export module Shapes {
 
     // 円
-    export class Circle extends SymbolizeBase {
+    export class Circle extends Symbol {
 
         private _gradient: Gradietion.Gradient;
 
@@ -379,7 +349,7 @@ export module Shapes {
     }
 
     // 矩形
-    export class Box extends SymbolizeBase {
+    export class Box extends Symbol {
 
         private _gradient: Gradietion.Gradient;
         set gradient(g: Gradietion.Gradient) { this._gradient = g; }
