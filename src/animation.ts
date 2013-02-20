@@ -1,13 +1,105 @@
 
 import util = module('util');
 
+// canvas element only.
+export module Common {
+
+    export class Color {
+        constructor(public r=0, public g=0, public b=0, public a=1.0) {}
+
+        toFillStyle() : string {
+            var colors = [this.r.toString(), this.g.toString(), this.b.toString(), this.a.toString()].join(',');
+            return "rgba(" + colors + ")";
+        }
+    }
+
+    export class Rect {
+
+        get center() : Math.Vector2D {return this.calcCenter();}
+        get width() : number {return this.left - this.right;}
+        get height() : number {return this.bottom - this.top;}
+
+        constructor(public left:number, public top:number,
+                    public right:number, public bottom:number) {
+            this.center = this.calcCenter();
+        }
+
+        private calcCenter() : Vector2D {
+            var width = this.right - this.left,
+            height = this.bottom - this.top;
+            return new Math.Vector2D(this.left + width / 2,
+                                     this.top + height / 2);
+        }
+
+        set(left:number, top:number, right:number, bottom:number) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+        }
+    }
+
+    module Math {
+
+        // 二次元ベクトルを返す。基本的にチェーンメソッドで繋げられるようになっている。
+        export class Vector2D {
+            constructor(public x:number, public y:number) {}
+
+            // このオブジェクトをnormalizeしたものを返す。
+            normalize() : Vector2D {
+                var norm = this.norm();
+                this.x /= norm;
+                this.y /= norm;
+                return this;
+            }
+
+            norm() : number {
+                return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+            }
+
+            dot(v:Vector2D) :number {
+                if (v == null) {
+                    return 0;
+                }
+
+                return this.x * v.x + this.y * v.y;
+            }
+
+            // 自身に渡されたベクトルを加算した新しいベクトルを返す
+            add(v:Vector2D) : Vector2D {
+                return new Vector2D(this.x + v.x, this.y + v.y);
+            }
+
+            // 自身に渡されたベクトルを減算した新しいベクトルを返す
+            sub(v:Vector2D) : Vector2D {
+                return new Vector2D(this.x - v.x, this.y - v.y);
+            }
+
+            // 自身をscaleしたVectorを返す
+            scale(s:number) : Vector2D {
+                this.x *= s;
+                this.y *= s;
+                return this;
+            }
+
+            // 自身を逆向きにして、自身を返す。
+            invert() : Vector2D {
+                this.x *= -1;
+                this.y *= -1;
+                return this;
+            }
+        }
+    }
+}
+
+
 // レンダリング可能なオブジェクトが実装するインターフェース
 export interface Renderable {
     render(context: Context): void;
 }
 
-// 描画可能なオブジェクトのインターフェース。
-export interface Entity extends Renderable {
+// 描画可能なオブジェクトのインターフェース
+export interface Symbolize extends Rendarable {
     // 図形における基準となる2D座標。
     // この座標はすべての図形において、図形全体を包む矩形の左上座標を表す
     x: number;
@@ -15,38 +107,57 @@ export interface Entity extends Renderable {
     width: number;
     height: number;
 
+    // 表示するかどうかを表す
+    visible: bool;
+
     // レンダリングを行う順序を指定する。0が最も奥で、値が増えるほど前になる。
     zIndex: number;
+
+    // 指定されたx/y軸方向への距離分移動する
+    moveBy(x:number, y:number) : void;
+    // 指定されたx/y座標に移動する
+    moveTo(x:number, y:number) : void;
 }
 
 // 描画可能なオブジェクトの基底クラス
-export class EntityBase implements Entity {
+export class SymbolBase implements Symbolize {
     // それぞれの値について、初期値を設定する責任は、このクラスを継承した先のクラスにある
 
     constructor(public x = 0, public y = 0,
-        public width = 0, public height = 0, public zIndex = 0) {
+                public width = 0, public height = 0,
+                public visible = true, public zIndex = 0) {
     }
 
     // このクラスのレンダリングは何も行わない
     render(context: Context): void { }
+
+    moveBy(x:number, y:number) {
+        this.x += x;
+        this.y += y;
+    }
+
+    moveTo(x:number, y:number) {
+        this.x = x;
+        this.y = y;
+    }
 }
 
 export class RenderingEngine {
-    private _shapeList: Entity[];
+    private _shapeList: Symbolize[];
 
-    get entities(): Entity[] { return this._shapeList; }
+    get entities(): Symbolize[] { return this._shapeList; }
 
     constructor() {
         this._shapeList = [];
     }
 
-    addEntity(entity: Entity): void {
+    addSymbolize(entity: Symbolize): void {
         if (entity != null) {
             this._shapeList.push(entity);
         }
     }
 
-    removeEntity(entity: Entity): void {
+    removeSymbolize(entity: Symbolize): void {
         if (entity != null) {
             var indexOf = this._shapeList.indexOf(entity);
             this._shapeList.splice(indexOf, 1);
@@ -235,7 +346,7 @@ module Util {
 export module Shapes {
 
     // 円
-    export class Circle extends EntityBase {
+    export class Circle extends SymbolizeBase {
 
         private _gradient: Gradietion.Gradient;
 
@@ -268,7 +379,7 @@ export module Shapes {
     }
 
     // 矩形
-    export class Box extends EntityBase {
+    export class Box extends SymbolizeBase {
 
         private _gradient: Gradietion.Gradient;
         set gradient(g: Gradietion.Gradient) { this._gradient = g; }

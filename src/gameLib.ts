@@ -9,17 +9,17 @@ export interface IScene {
     onload: (game: Game) => void;
     ontouch: (game: Game, event: MouseEvent) => void;
 
-    entities: animation.Entity[];
+    entities: Entity[];
 
     /**
      * 管理対象のentityを追加する
      */
-    addEntity(entity: animation.Entity): void;
+    addEntity(entity: Entity): void;
 
     /**
      * 指定されたEntityを削除する
      */
-    removeEntity(entity: animation.Entity): void;
+    removeEntity(entity: Entity): void;
 
     // 指定されたcontextに対してレンダリングを行う
     render(context: animation.Context): void;
@@ -36,7 +36,7 @@ export class Scene implements IScene {
     // 各シーンをレンダリングするためのレンダリングエンジン
     private _engine: animation.RenderingEngine;
 
-    get entities(): animation.Entity[] { return this._engine.entities; }
+    get entities(): Entity[] { return this._engine.entities; }
 
     constructor() {
         this._engine = new animation.RenderingEngine();
@@ -45,20 +45,69 @@ export class Scene implements IScene {
     /**
      * 管理対象のentityを追加する
      */
-    addEntity(entity: animation.Entity): void {
+    addEntity(entity: Entity): void {
         this._engine.addEntity(entity);
     }
 
     /**
      * 指定されたEntityを削除する
      */
-    removeEntity(entity: animation.Entity): void {
+    removeEntity(entity: Entity): void {
         this._engine.removeEntity(entity);
     }
 
     // 指定されたcontextに対してレンダリングを行う
     render(context: animation.Context): void {
         this._engine.renderEntities(context);
+    }
+}
+
+// Gameで格納されるオブジェクトのベース
+export interface Entity extends animation.Symbolize {
+    // 渡されたObjectベースの矩形同士が衝突しているかどうかを返す
+    intersect(other:Entity) : bool;
+    // ObjectBaseの中心点動詞が衝突しているかどうかを返す。
+    // distanceが渡されない場合、distanceのデフォルト値はObjectBaseの横幅と
+    // 高さの平均値が使われる
+    within(other:Entity, distance?:number) : bool;
+}
+
+export module BaseClasses {
+    export class EntityImpl extends Entity {
+        constructor() {}
+
+        intersect(other:Entity) : bool {
+            if (other == null) {
+                return false;
+            }
+
+            var rectThis = {left : this.x,
+                            top:this.y,
+                            right : this.x + this.width,
+                            bottom: this.y + this.height},
+            rectOther = {left : other.x,
+                         top:other.y,
+                         right : other.x + other.width,
+                         bottom: other.y + other.height}
+
+            if (rectThis.right <= rectOther.left) {
+                return false;
+            } else if (rectThis.left >= rectOther.right) {
+                return false;
+            } else if (rectThis.bottom <= rectOther.top) {
+                return false;
+            } else if (rectThis.top >= rectOther.bottom) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        within(other:Entity, distance? = -1) : bool {
+            if (distance == -1) {
+                // distanceが設定されない場合、互いのwidth/heightの平均値が利用される
+            }
+        }
     }
 }
 
@@ -287,18 +336,5 @@ export module Physics {
         // reflectBodyState実行時に実行される処理。
         // trueが返された場合には、本来のreflectBodyStateの処理も行われる。
         onreflect() : bool;
-    }
-}
-
-// canvas element only.
-export module Base {
-
-    export class Color {
-        constructor(public r=0, public g=0, public b=0, public a=1.0) {}
-
-        toFillStyle() : string {
-            var colors = [this.r.toString(), this.g.toString(), this.b.toString(), this.a.toString()].join(',');
-            return "rgba(" + colors + ")";
-        }
     }
 }
