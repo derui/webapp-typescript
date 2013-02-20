@@ -1,2 +1,6 @@
 
 *.omc
+*.suo
+*.js.map
+bin/
+obj/

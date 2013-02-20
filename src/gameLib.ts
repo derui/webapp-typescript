@@ -3,11 +3,29 @@
 import util = module("util");
 import animation = module("animation");
 
-export interface Group {
+export class EventConstants {
+    /** タッチ/クリックされた際に発行されるイベント */
+    static TOUCH_START: string = "ontouchstart";
+    /** 各フレーム開始時に発行されるイベント */
+    static ENTER_FRAME: string = "onenterframe";
+}
 
-    onenterframe: (game: Game) => void;
-    onload: (game: Game) => void;
-    ontouch: (game: Game, event: MouseEvent) => void;
+/**
+ * イベントを受け取る対象を表すインターフェース
+ */
+export interface EventTarget {
+
+    // 受け取ったイベントが存在するなら、イベントを実行する
+    fire(event: string, e: Event): void;
+    // イベントリスナを追加する。対応するイベントリスナがすでに存在する場合は上書きする
+    addListener(event: string, f: (e: Event) => void ): void;
+    // addListenerの別名
+    on(event: string, f: (e: Event) => void ): void;
+    // 指定されたイベントに対するイベントリスナを削除する
+    removeListener(event: string): void;
+}
+
+export interface Group {
 
     entities: Entity[];
 
@@ -26,23 +44,47 @@ export interface Group {
 }
 
 // ゲーム内における各シーンのインターフェース。
-export interface Scene extends Group {}
+export interface Scene extends Group {
+    // 各フレームに入った際に実行されるイベント
+    onenterframe: (scene: Scene) => void;
+}
+
+export class EventTargetImpl implements EventTarget {
+    private _listeners: {};
+
+    constructor() { }
+
+    addListener(event: string, f: (e: Event) => void ): void {
+        this._listeners[event] = f;
+    }
+
+    on(event: string, f: (e: Event) => void ): void {
+        this._listeners[event] = f;
+    }
+
+    removeListener(event: string): void {
+        this._listeners[event] = null;
+    }
+
+    fire(event: string, e: Event): void {
+        if (this._listeners[event]) {
+            this._listeners[event](e);
+        }
+    }
+}
 
 // ゲーム内シーンの構成単位。各シーン間で、登録されているオブジェクトなどは独立している。
 export class SceneImpl implements Scene {
 
-    // FPSにおける各フレームに入った段階で実行される関数
-    onenterframe: (game: Game) => void = null;
-    onload: (game: Game) => void = null;
-    ontouch: (game: Game, event: MouseEvent) => void = null;
-
     // 各シーンに存在するオブジェクト
     private _entities: Entity[] = [];
 
+    // 各フレームで実行するイベント
+    onenterframe: (scene: Scene) => void;
+
     get entities(): Entity[] { return this._entities; }
 
-    constructor() {
-    }
+    constructor() { }
 
     /**
      * 管理対象のentityを追加する
@@ -116,12 +158,10 @@ export module BaseClasses {
             this._symbol.render(context);
         }
 
-        // 二つの矩形に対するあたり判定を行う。触れている状態の場合は、intersectとは判定しない
         intersect(other: Entity): bool {
             return Intersector.intersect(this, other);
         }
 
-        // ちょうどdistanceの距離となる場合は、withinと判定しない
         within(other: Entity, distance? = -1): bool {
             return Intersector.within(this, other, distance);
         }
@@ -179,7 +219,7 @@ export module BaseClasses {
         }
     }
 
-    export class EntityImpl extends animation.Symbol {
+    export class EntityImpl extends animation.Symbol implements Entity {
 
         constructor() {
             super();
@@ -223,6 +263,10 @@ export class Game {
     // Sceneスタックは、最低一つ必ず積まれている
     get currentScene(): Scene { return this._sceneStack[this._sceneStack.length - 1]; }
 
+    // game.start時に一度だけ実行される。最初のstart時にのみ呼び出されるため、
+    // 一度stopしてから再度startしても実行されない
+    onload: (game: Game) => void = null;
+
     constructor(public width: number, public height: number) {
 
         // レンダリング対象となるCanvasを追加する
@@ -233,14 +277,10 @@ export class Game {
 
         // タッチ/マウスでそれぞれ同一のハンドラを利用する
         elem.addEventListener("touchstart", (e: MouseEvent) => {
-            if (this.currentScene.ontouch != null) {
-                this.currentScene.ontouch(this, e);
-            }
+            this.currentScene.fire(EventConstants.TOUCH_START, e);
         });
         elem.addEventListener("click", (e: MouseEvent) => {
-            if (this.currentScene.ontouch != null) {
-                this.currentScene.ontouch(this, e);
-            }
+            this.currentScene.fire(EventConstants.TOUCH_START, e);
         });
 
         var canvas = <HTMLCanvasElement>elem;
@@ -258,14 +298,12 @@ export class Game {
             return;
         }
 
-        if (this.currentScene.onload && !this._isGameStarted) {
-            this.currentScene.onload(this);
+        if (this.onload !== null && !this._isGameStarted) {
+            this.onload(this);
         }
 
         this._intervalHandle = window.setInterval(() => {
-            if (this.currentScene.onenterframe) {
-                this.currentScene.onenterframe(this);
-            }
+            this.currentScene.fire(EventConstants.TOUCH_START, e);
 
             this.render();
 
