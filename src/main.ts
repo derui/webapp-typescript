@@ -1,7 +1,6 @@
 /// <reference path='../lib/jquery.d.ts' />
 /// <reference path='../lib/Box2dWeb.d.ts' />
 
-import util = module("util");
 import GL = module("gameLib");
 import Firework = module("firework");
 import animation = module("animation");
@@ -28,6 +27,8 @@ game.onload = (g) => {
         world.addBody(array[index]);
     });
 
+    var blue = new animation.Common.Color(0, 0, 255);
+
     var rc = () => {
         var r = Math.floor(Math.random() * 256 % 255) + 1,
         g = Math.floor(Math.random() * 256 % 255) + 1,
@@ -43,27 +44,28 @@ game.onload = (g) => {
     var minX = showCase.leftBound, maxX = showCase.rightBound;
     var count = 0;
     var star_count = 0;
-    game.currentScene.onenterframe = (g) => {
+    game.currentScene.on(GL.EventConstants.ENTER_FRAME, (e) => {
 
         if (++count == 20) {
             count = 0;
             var star = new Firework.Star();
-            star.setColor(rc());
+            star.color = rc();
             star.x = 100;
             star.y = 0;
-            g.currentScene.addEntity(star);
+            star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchedHandler(game.currentScene));
+            game.currentScene.addEntity(star);
             world.add(new GL.Physics.BodyBinder(
-                star, Firework.Star.createFixture(star, world.worldScale)));
+                star, star.createFixture(world.worldScale)));
             star_count++;
         }
 
         // 物理世界を更新する。
         world.step(1 / game.fps, 3, 3);
-    };
+    });
 
-    game.currentScene.ontouch = (g: GL.Game, event: MouseEvent) => {
+    game.currentScene.on(GL.EventConstants.TOUCH_START, (event: MouseEvent) => {
 
-        var entities = g.currentScene.entities;
+        var entities = game.currentScene.entities;
         var vec = animation.Common.Vector;
         // クリックした座標に星が存在するかどうかを調べる。
         entities = entities.filter((elem) => {
@@ -71,16 +73,12 @@ game.onload = (g) => {
             elem.y + elem.height / 2);
             var touched = new vec.Vector2D(event.clientX, event.clientY);
 
-            
             return center.sub(touched).norm() < elem.width / 2;
         });
         entities.forEach((elem) => {
-            var elem = elem;
-            elem.setColor(new animation.Common.Color(255, 0, 0, 1));
+            elem.listener.fire(GL.EventConstants.TOUCH_START, event);
         });
-
-        document.getElementById("textarea").innerHTML = "touched : " + event.clientX + ":" + event.clientY;
-    };
+    });
 
     // 10フレーム毎に星を生成する。
     // game.rootScene.tl.then(() => {

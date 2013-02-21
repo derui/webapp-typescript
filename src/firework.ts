@@ -60,16 +60,16 @@ module StarUtil {
 }
 
 export interface IStar extends gl.Entity, gl.Physics.BodyBindable, ObjectBase {
-    setColor(color: animation.Common.Color): void;
 }
 
 // メインのオブジェクトとなるStar
 export class Star extends gl.BaseClasses.EntityImpl implements IStar {
     body: B2Body;
     private _circle: animation.Shapes.Circle;
+    private _state : ObjectInfo = new ObjectInfo(ObjectType.Star);
 
     // 各starで共通するFixtureDefinition
-    static private _fixDef = (): B2FixtureDef => {
+    private _fixDef = (): B2FixtureDef => {
         var fix = new Box2D.Dynamics.b2FixtureDef();
         fix.density = 1.0;       // 密度
         fix.friction = 1.5;      // 摩擦係数
@@ -77,7 +77,7 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
         return fix;
     } ();
 
-    private _color: animation.Common.Color = new animation.Common.Color();
+    set color(col:animation.Common.Color) { this._circle.baseColor = col;}
 
     // 必要なパラメータを同期させる
     private syncParam(): void {
@@ -98,8 +98,8 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
         return true;
     }
 
-    setColor(color: animation.Common.Color): void {
-        this._color = color;
+    isConnectable() : bool {
+        return this._state.objectState === ObjectState.Free;
     }
 
     // bodyからデータを反映させる際に呼び出されるコールバック
@@ -114,10 +114,13 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
             }
         }
         // 星同士が4つ以上隣接したら、staticに変更する。
-        if (contacts.length >= 4) {
-            contacts.forEach((e) => {
-                var info: ObjectInfo = e.GetUserData();
-                info.objectState = ObjectState.Connected;
+        if (contacts.length >= 4 && this.isConnectable()) {
+            contacts.filter((e) => {
+                var info_e: ObjectInfo = e.GetUserData();
+                return info_e.objectState == ObjectState.Free;
+            }).forEach((e) => {
+                var info_e: ObjectInfo = e.GetUserData();
+                info_e.objectState = ObjectState.Connected;
                 if (body != e && info.type == ObjectType.Star) {
                     e.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
                 }
@@ -126,6 +129,7 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
             var info: ObjectInfo = body.GetUserData();
             info.objectState = ObjectState.Connected;
         }
+
         return true;
     }
 
@@ -137,10 +141,15 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
         var info: ObjectInfo = this.body.GetUserData();
 
         // 連結している場合は、灰色ベースの色にしてしまう
-        if (info.objectState == ObjectState.Connected) {
+        switch (this._state.objectState) {
+        case ObjectState.Connected:
             grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
-        } else {
-            grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).
+            break;
+        case ObjectState.PrepareLaunch:
+            grad.colorStop(0.0, this._circle.baseColor.toFillStyle()).colorStop(1.0, this._circle.baseColor.toFillStyle());
+            break;
+        default:
+            grad.colorStop(0.0, "#fff").colorStop(0.5, this._circle.baseColor.toFillStyle()).
                 colorStop(1.0, "#000");
         }
         this.syncParam();
@@ -149,17 +158,32 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
     }
 
     // 渡されたstarに適合するbodyの設定を作成する。
-    static createFixture(target: IStar, scale: number): gl.Physics.BodyDefinition {
+    createFixture(scale: number): gl.Physics.BodyDefinition {
         var fixDef = this._fixDef;
         var bodyDef = new Box2D.Dynamics.b2BodyDef();
         bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
-        bodyDef.userData = new ObjectInfo(ObjectType.Star);
-        bodyDef.position.Set((target.x + target.width / 2) / scale,
-                             (target.y + target.height / 2) / scale);
+        bodyDef.userData = this._state;
+        bodyDef.position.Set((this.x + this.width / 2) / scale,
+                             (this.y + this.height / 2) / scale);
         bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
-        fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(target.width / 2 / scale);
-        console.log(target.width / 2);
+        fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.width / 2 / scale);
         return { bodyDef: bodyDef, fixtureDef: fixDef };
+    }
+
+    // ontouchのハンドラを作成して返す。
+    makeTouchedHandler(scene: gl.Scene) : (e:Event) => bool {
+        return (e:Event) => {
+            if (this._state.objectState !== ObjectState.PrepareLaunch) {
+                this._circle.x -= this._circle.width;
+                this._circle.y -= this._circle.height;
+                this._circle.radius *= 2;
+                this._circle.width *= 2;
+                this._circle.height *= 2;
+                this._circle.baseColor.a = 0.3;
+                this._state.objectState = ObjectState.PrepareLaunch;
+            }
+            return true;
+        }
     }
 }
 

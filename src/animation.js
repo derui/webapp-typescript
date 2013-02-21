@@ -5,49 +5,159 @@ var __extends = this.__extends || function (d, b) {
 };
 define(["require", "exports"], function(require, exports) {
     
+    // canvas element only.
+    (function (Common) {
+        var Color = (function () {
+            function Color(r, g, b, a) {
+                if (typeof r === "undefined") { r = 0; }
+                if (typeof g === "undefined") { g = 0; }
+                if (typeof b === "undefined") { b = 0; }
+                if (typeof a === "undefined") { a = 1.0; }
+                this.r = r;
+                this.g = g;
+                this.b = b;
+                this.a = a;
+            }
+            Color.prototype.toFillStyle = function () {
+                var colors = [
+                    this.r.toString(), 
+                    this.g.toString(), 
+                    this.b.toString(), 
+                    this.a.toString()
+                ].join(',');
+                return "rgba(" + colors + ")";
+            };
+            return Color;
+        })();
+        Common.Color = Color;        
+        var Rect = (function () {
+            function Rect(left, top, right, bottom) {
+                this.left = left;
+                this.top = top;
+                this.right = right;
+                this.bottom = bottom;
+                this.center = this.calcCenter();
+            }
+            Object.defineProperty(Rect.prototype, "center", {
+                get: function () {
+                    return this.calcCenter();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rect.prototype, "width", {
+                get: function () {
+                    return this.left - this.right;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rect.prototype, "height", {
+                get: function () {
+                    return this.bottom - this.top;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Rect.prototype.calcCenter = function () {
+                var width = this.right - this.left, height = this.bottom - this.top;
+                return new Vector.Vector2D(this.left + width / 2, this.top + height / 2);
+            };
+            Rect.prototype.set = function (left, top, right, bottom) {
+                this.left = left;
+                this.top = top;
+                this.right = right;
+                this.bottom = bottom;
+            };
+            return Rect;
+        })();
+        Common.Rect = Rect;        
+        (function (Vector) {
+            // 二次元ベクトルを返す。基本的にチェーンメソッドで繋げられるようになっている。
+            var Vector2D = (function () {
+                function Vector2D(x, y) {
+                    this.x = x;
+                    this.y = y;
+                }
+                Vector2D.prototype.normalize = // このオブジェクトをnormalizeしたものを返す。
+                function () {
+                    var norm = this.norm();
+                    this.x /= norm;
+                    this.y /= norm;
+                    return this;
+                };
+                Vector2D.prototype.norm = function () {
+                    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+                };
+                Vector2D.prototype.dot = function (v) {
+                    if(v == null) {
+                        return 0;
+                    }
+                    return this.x * v.x + this.y * v.y;
+                };
+                Vector2D.prototype.add = // 自身に渡されたベクトルを加算した新しいベクトルを返す
+                function (v) {
+                    return new Vector2D(this.x + v.x, this.y + v.y);
+                };
+                Vector2D.prototype.sub = // 自身に渡されたベクトルを減算した新しいベクトルを返す
+                function (v) {
+                    return new Vector2D(this.x - v.x, this.y - v.y);
+                };
+                Vector2D.prototype.scale = // 自身をscaleしたVectorを返す
+                function (s) {
+                    this.x *= s;
+                    this.y *= s;
+                    return this;
+                };
+                Vector2D.prototype.invert = // 自身を逆向きにして、自身を返す。
+                function () {
+                    this.x *= -1;
+                    this.y *= -1;
+                    return this;
+                };
+                return Vector2D;
+            })();
+            Vector.Vector2D = Vector2D;            
+        })(Common.Vector || (Common.Vector = {}));
+        var Vector = Common.Vector;
+    })(exports.Common || (exports.Common = {}));
+    var Common = exports.Common;
     // 描画可能なオブジェクトの基底クラス
-    var EntityBase = (function () {
-        function EntityBase() {
-            this.x = 0;
-            this.y = 0;
-            this.width = 0;
-            this.height = 0;
-            this.zIndex = 0;
+    var Symbol = (function () {
+        // それぞれの値について、初期値を設定する責任は、このクラスを継承した先のクラスにある
+        function Symbol(x, y, width, height, visible, zIndex) {
+            if (typeof x === "undefined") { x = 0; }
+            if (typeof y === "undefined") { y = 0; }
+            if (typeof width === "undefined") { width = 0; }
+            if (typeof height === "undefined") { height = 0; }
+            if (typeof visible === "undefined") { visible = true; }
+            if (typeof zIndex === "undefined") { zIndex = 0; }
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.visible = visible;
+            this.zIndex = zIndex;
         }
-        EntityBase.prototype.render = // このクラスのレンダリングは何も行わない
+        Symbol.prototype.render = // このクラスのレンダリングは何も行わない
         function (context) {
         };
-        return EntityBase;
+        Symbol.prototype.moveBy = function (x, y) {
+            this.x += x;
+            this.y += y;
+        };
+        Symbol.prototype.moveTo = function (x, y) {
+            this.x = x;
+            this.y = y;
+        };
+        return Symbol;
     })();
-    exports.EntityBase = EntityBase;    
-    var RenderingEngine = (function () {
-        function RenderingEngine() {
-            this._shapeList = [];
-        }
-        RenderingEngine.prototype.addEntity = function (entity) {
-            if(entity != null) {
-                this._shapeList.push(entity);
-            }
-        };
-        RenderingEngine.prototype.removeEntity = function (entity) {
-            if(entity != null) {
-                var indexOf = this._shapeList.indexOf(entity);
-                this._shapeList.splice(indexOf, 1);
-            }
-        };
-        RenderingEngine.prototype.renderEntities = function (context) {
-            if(context != null) {
-                context.clear();
-                for(var i = 0; i < this._shapeList.length; ++i) {
-                    this._shapeList[i].render(context);
-                }
-            }
-        };
-        return RenderingEngine;
-    })();
-    exports.RenderingEngine = RenderingEngine;    
+    exports.Symbol = Symbol;    
     // レンダリングターゲットに対して、各種のアニメーションを管理するための
     // singletonなクラス
+    // アニメーションを実行したいオブジェクトは、Animaから生成されるアニメーションオブジェクト
+    // を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
+    // 一極管理することができる。
     var Anima = (function () {
         function Anima() { }
         Anima._instance = null;
@@ -119,6 +229,12 @@ define(["require", "exports"], function(require, exports) {
                     this._context = context;
                 }
             }
+            Linear.prototype.clear = function () {
+                this._fromX = 0;
+                this._fromY = 0;
+                this._toX = 0;
+                this._toY = 0;
+            };
             Linear.prototype.from = function (x, y) {
                 this._fromX = x;
                 this._fromY = y;
@@ -152,6 +268,14 @@ define(["require", "exports"], function(require, exports) {
                     this._context = context;
                 }
             }
+            Radial.prototype.clear = function () {
+                this._fromX = 0;
+                this._fromY = 0;
+                this._fromR = 0;
+                this._toX = 0;
+                this._toY = 0;
+                this._toR = 0;
+            };
             Radial.prototype.from = function (x, y, r) {
                 this._fromX = x;
                 this._fromY = y;
@@ -205,8 +329,12 @@ define(["require", "exports"], function(require, exports) {
             function Circle(radius) {
                         _super.call(this);
                 this.radius = radius;
+                this.baseColor = new Common.Color();
+                this.x = 0;
+                this.y = 0;
                 this.width = radius * 2;
                 this.height = radius * 2;
+                this.zIndex = 0;
             }
             Object.defineProperty(Circle.prototype, "gradient", {
                 set: function (g) {
@@ -218,15 +346,18 @@ define(["require", "exports"], function(require, exports) {
             Circle.prototype.render = function (context) {
                 var ctx = context.context;
                 // グラディエーションが設定可能である場合は設定する
+                // 設定可能ではない場合は、baseColorを改めて設定する
                 if(this._gradient) {
                     ctx.fillStyle = this._gradient.raw();
+                } else {
+                    ctx.fillStyle = this.baseColor.toFillStyle();
                 }
                 ctx.beginPath();
                 ctx.arc(this.x + this.radius, this.y + this.radius, this.radius, 0, Math.PI * 2, true);
                 ctx.fill();
             };
             return Circle;
-        })(EntityBase);
+        })(Symbol);
         Shapes.Circle = Circle;        
         // 矩形
         var Box = (function (_super) {
@@ -236,6 +367,9 @@ define(["require", "exports"], function(require, exports) {
                 this.width = width;
                 this.height = height;
                 this.isFill = true;
+                this.x = 0;
+                this.y = 0;
+                this.zIndex = 0;
             }
             Object.defineProperty(Box.prototype, "gradient", {
                 set: function (g) {
@@ -260,7 +394,7 @@ define(["require", "exports"], function(require, exports) {
                 });
             };
             return Box;
-        })(EntityBase);
+        })(Symbol);
         Shapes.Box = Box;        
     })(exports.Shapes || (exports.Shapes = {}));
     var Shapes = exports.Shapes;

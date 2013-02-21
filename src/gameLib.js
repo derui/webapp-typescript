@@ -7,34 +7,239 @@ define(["require", "exports", "animation"], function(require, exports, __animati
     
     var animation = __animation__;
 
-    // ゲーム内シーンの構成単位。各シーン間で、登録されているオブジェクトなどは独立している。
-    var Scene = (function () {
-        function Scene() {
-            // FPSにおける各フレームに入った段階で実行される関数
-            this.onenterframe = null;
-            this.onload = null;
-            this.ontouch = null;
-            this._engine = new animation.RenderingEngine();
+    var EventConstants = (function () {
+        function EventConstants() { }
+        EventConstants.TOUCH_START = "ontouchstart";
+        EventConstants.ENTER_FRAME = "onenterframe";
+        return EventConstants;
+    })();
+    exports.EventConstants = EventConstants;    
+    // イベントの対象となることができるオブジェクトの実装
+    var EventTargetImpl = (function () {
+        function EventTargetImpl() {
+            this._listeners = {
+            };
         }
-        Scene.prototype.addEntity = /**
+        EventTargetImpl.prototype.addListener = function (event, f) {
+            this._listeners[event] = f;
+        };
+        EventTargetImpl.prototype.on = function (event, f) {
+            this._listeners[event] = f;
+        };
+        EventTargetImpl.prototype.removeListener = function (event) {
+            this._listeners[event] = null;
+        };
+        EventTargetImpl.prototype.fire = function (event, e) {
+            if(this._listeners[event]) {
+                this._listeners[event](e);
+            }
+        };
+        return EventTargetImpl;
+    })();
+    exports.EventTargetImpl = EventTargetImpl;    
+    // ゲーム内シーンの構成単位。各シーン間で、登録されているオブジェクトなどは独立している。
+    var SceneImpl = (function (_super) {
+        __extends(SceneImpl, _super);
+        function SceneImpl() {
+                _super.call(this);
+            // 各シーンに存在するオブジェクト
+            this._entities = [];
+        }
+        Object.defineProperty(SceneImpl.prototype, "entities", {
+            get: function () {
+                return this._entities;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        SceneImpl.prototype.addEntity = /**
         * 管理対象のentityを追加する
         */
         function (entity) {
-            this._engine.addEntity(entity);
+            if(entity) {
+                entity.scene = this;
+                this._entities.push(entity);
+            }
         };
-        Scene.prototype.removeEntity = /**
+        SceneImpl.prototype.removeEntity = /**
         * 指定されたEntityを削除する
         */
         function (entity) {
-            this._engine.removeEntity(entity);
+            var index = this._entities.indexOf(entity);
+            if(index !== -1) {
+                this._entities = this._entities.splice(index, 1);
+            }
         };
-        Scene.prototype.render = // 指定されたcontextに対してレンダリングを行う
+        SceneImpl.prototype.render = // 指定されたcontextに対してレンダリングを行う
         function (context) {
-            this._engine.renderEntities(context);
+            context.clear();
+            this._entities.forEach(function (elem) {
+                return elem.render(context);
+            });
         };
-        return Scene;
-    })();
-    exports.Scene = Scene;    
+        return SceneImpl;
+    })(EventTargetImpl);
+    exports.SceneImpl = SceneImpl;    
+    (function (BaseClasses) {
+        // 渡されたSymbolオブジェクトを、Entityとして扱うためのプロキシクラス。
+        var EntityProxy = (function () {
+            function EntityProxy(symbol) {
+                this.scene = null;
+                this._symbol = symbol;
+                this.listener = new EventTargetImpl();
+            }
+            Object.defineProperty(EntityProxy.prototype, "x", {
+                get: // 各プロパティに対するgetter
+                function () {
+                    return this._symbol.x;
+                },
+                set: // 各プロパティに対するsetter
+                function (_x) {
+                    this._symbol.x = _x;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(EntityProxy.prototype, "y", {
+                get: function () {
+                    return this._symbol.y;
+                },
+                set: function (_y) {
+                    this._symbol.y = _y;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(EntityProxy.prototype, "width", {
+                get: function () {
+                    return this._symbol.width;
+                },
+                set: function (_width) {
+                    this._symbol.width = _width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(EntityProxy.prototype, "height", {
+                get: function () {
+                    return this._symbol.height;
+                },
+                set: function (_height) {
+                    this._symbol.height = _height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(EntityProxy.prototype, "zIndex", {
+                get: function () {
+                    return this._symbol.zIndex;
+                },
+                set: function (_z) {
+                    this._symbol.zIndex = _z;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(EntityProxy.prototype, "visible", {
+                get: function () {
+                    return this._symbol.visible;
+                },
+                set: function (v) {
+                    this._symbol.visible = v;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            EntityProxy.prototype.moveBy = function (x, y) {
+                this._symbol.moveBy(x, y);
+            };
+            EntityProxy.prototype.moveTo = function (x, y) {
+                this._symbol.moveTo(x, y);
+            };
+            EntityProxy.prototype.render = function (context) {
+                this._symbol.render(context);
+            };
+            EntityProxy.prototype.intersect = function (other) {
+                return Intersector.intersect(this, other);
+            };
+            EntityProxy.prototype.within = function (other, distance) {
+                if (typeof distance === "undefined") { distance = -1; }
+                return Intersector.within(this, other, distance);
+            };
+            return EntityProxy;
+        })();
+        BaseClasses.EntityProxy = EntityProxy;        
+        // Entity同士の衝突判定処理をまとめて提供するクラス。このクラス自体に影響するような
+        // 処理は存在しない
+        var Intersector;
+        (function (Intersector) {
+            // 二つの矩形に対するあたり判定を行う。触れている状態の場合は、intersectとは判定しない
+            function intersect(one, other) {
+                if(one == null || other == null) {
+                    return false;
+                }
+                var rectone = {
+                    left: one.x,
+                    top: one.y,
+                    right: one.x + one.width,
+                    bottom: one.y + one.height
+                }, rectOther = {
+                    left: other.x,
+                    top: other.y,
+                    right: other.x + other.width,
+                    bottom: other.y + other.height
+                };
+                if(rectone.right <= rectOther.left) {
+                    return false;
+                } else if(rectone.left >= rectOther.right) {
+                    return false;
+                } else if(rectone.bottom <= rectOther.top) {
+                    return false;
+                } else if(rectone.top >= rectOther.bottom) {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+            Intersector.intersect = intersect;
+            // ちょうどdistanceの距離となる場合は、withinと判定しない
+            function within(one, other, distance) {
+                if (typeof distance === "undefined") { distance = -1; }
+                if(distance == -1) {
+                    // distanceが設定されない場合、互いのwidth/heightの平均値が利用される
+                    distance = (one.width + other.width + one.height + other.height) / 4;
+                }
+                // Entityのx/y座標は、すべて矩形の左上座標を表すため、一度それぞれの中心座標を計算する。
+                var vec = animation.Common.Vector;
+                var oneC = new vec.Vector2D(one.x + one.width / 2, one.y + one.height / 2);
+                var otherC = new vec.Vector2D(one.x + one.width / 2, one.y + one.height / 2);
+                var dist = oneC.sub(otherC).norm();
+                return dist < distance;
+            }
+            Intersector.within = within;
+        })(Intersector || (Intersector = {}));
+        // Entityの基本実装を提供する。Entityは、イベントを受けることが可能。
+        var EntityImpl = (function (_super) {
+            __extends(EntityImpl, _super);
+            function EntityImpl() {
+                        _super.call(this);
+                this.scene = null;
+                this.listener = new EventTargetImpl();
+            }
+            EntityImpl.prototype.intersect = // 二つの矩形に対するあたり判定を行う。触れている状態の場合は、intersectとは判定しない
+            function (other) {
+                return Intersector.intersect(this, other);
+            };
+            EntityImpl.prototype.within = // ちょうどdistanceの距離となる場合は、withinと判定しない
+            function (other, distance) {
+                if (typeof distance === "undefined") { distance = -1; }
+                return Intersector.within(this, other, distance);
+            };
+            return EntityImpl;
+        })(animation.Symbol);
+        BaseClasses.EntityImpl = EntityImpl;        
+    })(exports.BaseClasses || (exports.BaseClasses = {}));
+    var BaseClasses = exports.BaseClasses;
     // フレームベースでの更新処理を提供するゲームクラス。レンダリングが呼び出されるタイミング
     // についても、ここで指定したフレームのタイミングとなる
     var Game = (function () {
@@ -49,6 +254,9 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             this._sceneStack = [];
             // 内部で作成するcanvasのID
             this._gameCanvasId = "game-canvas";
+            // game.start時に一度だけ実行される。最初のstart時にのみ呼び出されるため、
+            // 一度stopしてから再度startしても実行されない
+            this.onload = null;
             // レンダリング対象となるCanvasを追加する
             var elem = document.createElement("canvas");
             elem.id = this._gameCanvasId;
@@ -56,19 +264,15 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             elem.setAttribute("height", height.toString());
             // タッチ/マウスでそれぞれ同一のハンドラを利用する
             elem.addEventListener("touchstart", function (e) {
-                if(_this.currentScene.ontouch != null) {
-                    _this.currentScene.ontouch(_this, e);
-                }
+                _this.currentScene.fire(EventConstants.TOUCH_START, e);
             });
             elem.addEventListener("click", function (e) {
-                if(_this.currentScene.ontouch != null) {
-                    _this.currentScene.ontouch(_this, e);
-                }
+                _this.currentScene.fire(EventConstants.TOUCH_START, e);
             });
             var canvas = elem;
             this._targetContext = new animation.Context(canvas);
             document.body.appendChild(elem);
-            this._sceneStack.push(new Scene());
+            this._sceneStack.push(new SceneImpl());
         }
         Object.defineProperty(Game.prototype, "fps", {
             get: function () {
@@ -96,13 +300,11 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             if(this._isGameStarted) {
                 return;
             }
-            if(this.currentScene.onload && !this._isGameStarted) {
-                this.currentScene.onload(this);
+            if(this.onload !== null && !this._isGameStarted) {
+                this.onload(this);
             }
             this._intervalHandle = window.setInterval(function () {
-                if(_this.currentScene.onenterframe) {
-                    _this.currentScene.onenterframe(_this);
-                }
+                _this.currentScene.fire(EventConstants.ENTER_FRAME, null);
                 _this.render();
             }, 1000 / this._fps);
             this._isGameStarted = true;
@@ -116,7 +318,7 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             this._isGameStarted = false;
         };
         Game.prototype.pushScene = function (scene) {
-            if(scene != null) {
+            if(scene !== null) {
                 this._sceneStack.push(scene);
             }
         };
@@ -135,6 +337,7 @@ define(["require", "exports", "animation"], function(require, exports, __animati
         return Game;
     })();
     exports.Game = Game;    
+    // Box2DWebをラッピングして利用しやすくしたクラスを提供するモジュール
     (function (Physics) {
         var World = (function () {
             function World(gravity, sleep) {
@@ -177,7 +380,7 @@ define(["require", "exports", "animation"], function(require, exports, __animati
             World.prototype.remove = // 指定したtargetを持つadapterを削除する。
             function (target) {
                 this._binders = this._binders.filter(function (value, index, array) {
-                    array[index] != target;
+                    array[index] !== target;
                 });
             };
             World.prototype.removeBody = // 指定したBodyを環境から取り除く。
@@ -254,202 +457,4 @@ define(["require", "exports", "animation"], function(require, exports, __animati
         Physics.BodyBinder = BodyBinder;        
     })(exports.Physics || (exports.Physics = {}));
     var Physics = exports.Physics;
-    (function (Firework) {
-        var ObjectType;
-        (function (ObjectType) {
-            ObjectType._map = [];
-            ObjectType._map[0] = "Wall";
-            ObjectType.Wall = 0;
-            ObjectType._map[1] = "Star";
-            ObjectType.Star = 1;
-        })(ObjectType || (ObjectType = {}));
-        var ObjectState;
-        (function (ObjectState) {
-            ObjectState._map = [];
-            ObjectState._map[0] = "Connected";
-            ObjectState.Connected = 0;
-            ObjectState._map[1] = "Free";
-            ObjectState.Free = 1;
-            ObjectState._map[2] = "PrepareLaunch";
-            ObjectState.PrepareLaunch = 2;
-            ObjectState._map[3] = "Launch";
-            ObjectState.Launch = 3;
-        })(ObjectState || (ObjectState = {}));
-        // B2BodyのuserDataに登録する情報
-        var ObjectInfo = (function () {
-            function ObjectInfo(type) {
-                this.type = type;
-                this.objectState = ObjectState.Free;
-            }
-            return ObjectInfo;
-        })();        
-        // メインのオブジェクトとなるStar
-        var Star = (function (_super) {
-            __extends(Star, _super);
-            function Star(radius) {
-                        _super.call(this, radius);
-                this._color = new Base.Color();
-            }
-            Star._fixDef = (function () {
-                var fix = new Box2D.Dynamics.b2FixtureDef();
-                fix.density = 1.0// 密度
-                ;
-                fix.friction = 1.5// 摩擦係数
-                ;
-                fix.restitution = 0.2// 反発係数
-                ;
-                return fix;
-            })();
-            Star.prototype.isValid = function () {
-                return true;
-            };
-            Star.prototype.setColor = function (color) {
-                this._color = color;
-            };
-            Star.prototype.onreflect = // bodyからデータを反映させる際に呼び出されるコールバック
-            function () {
-                var body = this.body;
-                var count = 0;
-                var contacts = [];
-                for(var n = body.GetContactList(); n != null; n = n.next) {
-                    if(n.contact.IsTouching()) {
-                        contacts.push(n.other);
-                    }
-                }
-                // 星同士が4つ以上隣接したら、staticに変更する。
-                if(contacts.length >= 4) {
-                    contacts.forEach(function (e) {
-                        var info = e.GetUserData();
-                        info.objectState = ObjectState.Connected;
-                        if(body != e && info.type == ObjectType.Star) {
-                            e.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
-                        }
-                    });
-                    body.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
-                    var info = body.GetUserData();
-                    info.objectState = ObjectState.Connected;
-                }
-                return true;
-            };
-            Star.prototype.render = // starをレンダリングする
-            function (context) {
-                var r = this.radius;
-                var grad = new animation.Gradietion.Radial(context);
-                grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
-                var info = this.body.GetUserData();
-                // 連結している場合は、灰色ベースの色にしてしまう
-                if(info.objectState == ObjectState.Connected) {
-                    grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
-                } else {
-                    grad.colorStop(0.0, "#fff").colorStop(0.5, this._color.toFillStyle()).colorStop(1.0, "#000");
-                }
-                this.gradient = grad;
-                _super.prototype.render.call(this, context);
-            };
-            Star.createFixture = // 渡されたstarに適合するbodyの設定を作成する。
-            function createFixture(target, scale) {
-                var fixDef = this._fixDef;
-                var bodyDef = new Box2D.Dynamics.b2BodyDef();
-                bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
-                bodyDef.userData = new ObjectInfo(ObjectType.Star);
-                bodyDef.position.Set((target.x + target.width / 2) / scale, (target.y + target.height / 2) / scale);
-                bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
-                fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(target.width / 2 / scale);
-                return {
-                    bodyDef: bodyDef,
-                    fixtureDef: fixDef
-                };
-            };
-            return Star;
-        })(animation.Shapes.Circle);
-        Firework.Star = Star;        
-        var StarCaseOption = (function () {
-            function StarCaseOption() {
-                // 左右両壁の幅
-                this.sideWallThickness = 10;
-                // 地面の厚み
-                this.groundThickness = 10;
-            }
-            return StarCaseOption;
-        })();
-        Firework.StarCaseOption = StarCaseOption;        
-        // width / heightにあてはまるオブジェクトを生成する。
-        var StarCase = (function () {
-            function StarCase(width, height) {
-                this.width = width;
-                this.height = height;
-                this.walls = [];
-                this.wallShapes = [];
-            }
-            StarCase.prototype.initialize = function (scale, option) {
-                if (typeof option === "undefined") { option = new StarCaseOption(); }
-                var sideThick = option.sideWallThickness, ground = option.groundThickness;
-                this.walls.push(this.createWall(0, 0, sideThick, this.height));
-                this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
-                this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
-                // ここで作成される剛体は、見ためのSpriteの倍に相当する剛体とする
-                this.wallShapes.push(this.createShape(scale, -sideThick, 0, sideThick * 2, this.height * 2));
-                this.wallShapes.push(this.createShape(scale, this.width - sideThick, 0, sideThick * 2, this.height * 2));
-                this.wallShapes.push(this.createShape(scale, 0, this.height - ground, this.width * 2, ground * 2));
-                this.leftBound = sideThick;
-                this.rightBound = this.width - sideThick;
-                this.groundBound = this.height - ground;
-            };
-            StarCase.prototype.createWall = // 壁に相当するspriteを作る
-            function (x, y, w, h) {
-                var p = new animation.Shapes.Box(w, h);
-                p.x = x;
-                p.y = y;
-                return p;
-            };
-            StarCase.prototype.createShape = // 壁に相当する剛体を作る。
-            function (scale, x, y, w, h) {
-                var b2BodyDef = Box2D.Dynamics.b2BodyDef, b2Body = Box2D.Dynamics.b2Body, b2FixtureDef = Box2D.Dynamics.b2FixtureDef, b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
-                var fixDef = new b2FixtureDef();
-                fixDef.density = 1.0;
-                fixDef.friction = 1.5;
-                fixDef.restitution = 0.2;
-                var bodyDef = new b2BodyDef();
-                bodyDef.type = b2Body.b2_staticBody;
-                bodyDef.position.Set((x + w / 2) / scale, (y + h / 2) / scale);
-                bodyDef.userData = new ObjectInfo(ObjectType.Wall);
-                fixDef.shape = new b2PolygonShape();
-                fixDef.shape.SetAsBox(w / scale / 2, h / scale / 2);
-                return {
-                    bodyDef: bodyDef,
-                    fixtureDef: fixDef
-                };
-            };
-            return StarCase;
-        })();
-        Firework.StarCase = StarCase;        
-    })(exports.Firework || (exports.Firework = {}));
-    var Firework = exports.Firework;
-    // canvas element only.
-    (function (Base) {
-        var Color = (function () {
-            function Color(r, g, b, a) {
-                if (typeof r === "undefined") { r = 0; }
-                if (typeof g === "undefined") { g = 0; }
-                if (typeof b === "undefined") { b = 0; }
-                if (typeof a === "undefined") { a = 1.0; }
-                this.r = r;
-                this.g = g;
-                this.b = b;
-                this.a = a;
-            }
-            Color.prototype.toFillStyle = function () {
-                var colors = [
-                    this.r.toString(), 
-                    this.g.toString(), 
-                    this.b.toString(), 
-                    this.a.toString()
-                ].join(',');
-                return "rgba(" + colors + ")";
-            };
-            return Color;
-        })();
-        Base.Color = Color;        
-    })(exports.Base || (exports.Base = {}));
-    var Base = exports.Base;
 })

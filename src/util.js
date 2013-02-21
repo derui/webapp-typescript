@@ -21,4 +21,31 @@ define(["require", "exports"], function(require, exports) {
         return String;
     })();
     exports.String = String;    
+    // �W���̘A�z�z���Ƃ͈Ⴄ�A�^���S�ȘA�z�z���i�W�F�l���N�X�K�v�j
+    var Map = (function () {
+        function Map() {
+        }
+        Map.prototype.add = function (key, value) {
+            this._entries[key] = value;
+        };
+        Map.prototype.remove = function (key) {
+            delete this._entries[key];
+        };
+        Map.prototype.count = function () {
+            var count = 0;
+            for(var k in this._entries) {
+                count++;
+            }
+            return count;
+        };
+        Map.prototype.find = function (key) {
+            if(this._entries[key]) {
+                return this._entries[key];
+            } else {
+                return null;
+            }
+        };
+        return Map;
+    })();
+    exports.Map = Map;    
 })

@@ -200,6 +200,7 @@ export module Gradietion {
 
     // グラディエーションクラスのインターフェース
     export interface Gradient {
+        clear() : void;
         colorStop(offset: number, color: string): Gradient;
         raw(): CanvasGradient;
     }
@@ -217,6 +218,13 @@ export module Gradietion {
             if (context.contextEnabled) {
                 this._context = context;
             }
+        }
+
+        clear() : void {
+            this._fromX = 0;
+            this._fromY = 0;
+            this._toX = 0;
+            this._toY = 0;
         }
 
         from(x: number, y: number): Linear {
@@ -264,6 +272,15 @@ export module Gradietion {
             if (context.contextEnabled) {
                 this._context = context;
             }
+        }
+
+        clear() : void {
+            this._fromX = 0;
+            this._fromY = 0;
+            this._fromR = 0;
+            this._toX = 0;
+            this._toY = 0;
+            this._toR = 0;
         }
 
         from(x: number, y: number, r: number): Radial {
@@ -319,6 +336,7 @@ export module Shapes {
     export class Circle extends Symbol {
 
         private _gradient: Gradietion.Gradient;
+        baseColor : Common.Color = new Common.Color();
 
         set gradient(g: Gradietion.Gradient) { this._gradient = g; }
 
@@ -336,8 +354,11 @@ export module Shapes {
             var ctx = context.context;
 
             // グラディエーションが設定可能である場合は設定する
+            // 設定可能ではない場合は、baseColorを改めて設定する
             if (this._gradient) {
                 ctx.fillStyle = this._gradient.raw();
+            } else {
+                ctx.fillStyle = this.baseColor.toFillStyle();
             }
 
             ctx.beginPath();

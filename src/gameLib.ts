@@ -25,7 +25,7 @@ export interface EventTarget {
     removeListener(event: string): void;
 }
 
-export interface Group {
+export interface Group extends EventTarget {
 
     entities: Entity[];
 
@@ -45,12 +45,11 @@ export interface Group {
 
 // ゲーム内における各シーンのインターフェース。
 export interface Scene extends Group {
-    // 各フレームに入った際に実行されるイベント
-    onenterframe: (scene: Scene) => void;
 }
 
+// イベントの対象となることができるオブジェクトの実装
 export class EventTargetImpl implements EventTarget {
-    private _listeners: {};
+    private _listeners: {} = {};
 
     constructor() { }
 
@@ -74,23 +73,23 @@ export class EventTargetImpl implements EventTarget {
 }
 
 // ゲーム内シーンの構成単位。各シーン間で、登録されているオブジェクトなどは独立している。
-export class SceneImpl implements Scene {
+export class SceneImpl extends EventTargetImpl implements Scene {
 
     // 各シーンに存在するオブジェクト
     private _entities: Entity[] = [];
 
-    // 各フレームで実行するイベント
-    onenterframe: (scene: Scene) => void;
-
     get entities(): Entity[] { return this._entities; }
 
-    constructor() { }
+    constructor() { super();}
 
     /**
      * 管理対象のentityを追加する
      */
     addEntity(entity: Entity): void {
-        this._entities.push(entity);
+        if (entity) {
+            entity.scene = this;
+            this._entities.push(entity);
+        }
     }
 
     /**
@@ -98,7 +97,7 @@ export class SceneImpl implements Scene {
      */
     removeEntity(entity: Entity): void {
         var index = this._entities.indexOf(entity);
-        if (index != -1) {
+        if (index !== -1) {
             this._entities = this._entities.splice(index, 1);
         }
     }
@@ -118,6 +117,12 @@ export interface Entity extends animation.Symbolize {
     // distanceが渡されない場合、distanceのデフォルト値はObjectBaseの横幅と
     // 高さの平均値が使われる
     within(other: Entity, distance?: number): bool;
+
+    // このEntityが属するscene
+    scene: Scene;
+
+    // このクラスに関連づけられたEventTarget
+    listener : EventTarget ;
 }
 
 export module BaseClasses {
@@ -141,9 +146,12 @@ export module BaseClasses {
         set height(_height: number) { this._symbol.height = _height; }
         set zIndex(_z: number) { this._symbol.zIndex = _z; }
         set visible(v: bool) { this._symbol.visible = v; }
+        scene: Scene = null;
+        listener : EventTarget;
 
         constructor(symbol: animation.Symbolize) {
             this._symbol = symbol;
+            this.listener = new EventTargetImpl();
         }
 
         moveBy(x: number, y: number) {
@@ -219,7 +227,10 @@ export module BaseClasses {
         }
     }
 
+    // Entityの基本実装を提供する。Entityは、イベントを受けることが可能。
     export class EntityImpl extends animation.Symbol implements Entity {
+        scene: Scene = null;
+        listener: EventTarget = new EventTargetImpl();
 
         constructor() {
             super();
@@ -234,6 +245,8 @@ export module BaseClasses {
         within(other: Entity, distance? = -1): bool {
             return Intersector.within(this, other, distance);
         }
+
+
     }
 
 }
@@ -303,7 +316,7 @@ export class Game {
         }
 
         this._intervalHandle = window.setInterval(() => {
-            this.currentScene.fire(EventConstants.TOUCH_START, e);
+            this.currentScene.fire(EventConstants.ENTER_FRAME, null);
 
             this.render();
 
@@ -321,7 +334,7 @@ export class Game {
     }
 
     pushScene(scene: Scene): void {
-        if (scene != null) {
+        if (scene !== null) {
             this._sceneStack.push(scene);
         }
     }
@@ -375,7 +388,7 @@ export module Physics {
         // 指定したtargetを持つadapterを削除する。
         remove(target: BodyBinder): void {
             this._binders = this._binders.filter((value, index, array) => {
-                array[index] != target
+                array[index] !== target
             });
         }
 
