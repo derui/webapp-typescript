@@ -20,6 +20,7 @@ enum ObjectState {
     Connected,
     Free,
     PrepareLaunch,
+    Touched,
     Launch
 }
 
@@ -66,7 +67,8 @@ export interface IStar extends gl.Entity, gl.Physics.BodyBindable, ObjectBase {
 export class Star extends gl.BaseClasses.EntityImpl implements IStar {
     body: B2Body;
     private _circle: animation.Shapes.Circle;
-    private _state : ObjectInfo = new ObjectInfo(ObjectType.Star);
+    private _state: ObjectInfo = new ObjectInfo(ObjectType.Star);
+    private _scale: number = 1;
 
     // 各starで共通するFixtureDefinition
     private _fixDef = (): B2FixtureDef => {
@@ -121,7 +123,7 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
             }).forEach((e) => {
                 var info_e: ObjectInfo = e.GetUserData();
                 info_e.objectState = ObjectState.Connected;
-                if (body != e && info.type == ObjectType.Star) {
+                if (body != e && info_e.type == ObjectType.Star) {
                     e.SetType(Box2D.Dynamics.b2Body.b2_staticBody);
                 }
             });
@@ -167,11 +169,13 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
                              (this.y + this.height / 2) / scale);
         bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
         fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.width / 2 / scale);
+
+        this._scale = scale;
         return { bodyDef: bodyDef, fixtureDef: fixDef };
     }
 
-    // ontouchのハンドラを作成して返す。
-    makeTouchedHandler(scene: gl.Scene) : (e:Event) => bool {
+    // ontouchstartのハンドラを作成して返す。
+    makeTouchStartHandler(scene: gl.Scene) : (e:Event) => bool {
         return (e:Event) => {
             if (this._state.objectState !== ObjectState.PrepareLaunch) {
                 this._circle.x -= this._circle.width;
@@ -182,6 +186,33 @@ export class Star extends gl.BaseClasses.EntityImpl implements IStar {
                 this._circle.baseColor.a = 0.3;
                 this._state.objectState = ObjectState.PrepareLaunch;
             }
+            return true;
+        }
+    }
+
+    // ontouchendのハンドラを作成して返す
+    makeTouchEndHandler(scene: gl.Scene): (e: Event) => bool {
+        // タッチして離されたとき、その時点での領域にかかっている星を
+        // 消して、自身を拡大する。
+        return (e: Event) => {
+            var contain = scene.entities.filter((elem) => {
+                var distance = this._circle.radius * 2;
+                return this.within(elem, distance);
+            });
+            contain.forEach((elem) => {
+                scene.removeEntity(elem);
+            });
+
+            // 剛体の情報を更新する。
+            this._circle.radius *= 2;
+            this.body.SetType(Box2D.Dynamics.b2Body.b2_dynamicBody);
+            this.body.DestroyFixture(this.body.GetFixtureList());
+            var fixDef = this._fixDef;
+            fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.width / 2 / this._scale);
+            this.body.CreateFixture(fixDef);
+
+            // 準備段階は終了とする
+            this._state.objectState = ObjectState.PrepareLaunch;
             return true;
         }
     }

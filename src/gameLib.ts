@@ -8,6 +8,12 @@ export class EventConstants {
     static TOUCH_START: string = "ontouchstart";
     /** 各フレーム開始時に発行されるイベント */
     static ENTER_FRAME: string = "onenterframe";
+
+    /** タッチ/クリックが終わったとき（離されたとき）に発行されるイベント */
+    static TOUCH_END: string = "ontouchend";
+
+    /** GroupからEntityが取り除かれたときに発行されるイベント */
+    static REMOVE: string = "remove";
 }
 
 /**
@@ -76,19 +82,22 @@ export class EventTargetImpl implements EventTarget {
 export class SceneImpl extends EventTargetImpl implements Scene {
 
     // 各シーンに存在するオブジェクト
-    private _entities: Entity[] = [];
+    private _correctedEntities: Entity[] = [];
+    private _noncorrectedEntities: Entity[] = [];
 
-    get entities(): Entity[] { return this._entities; }
+    get entities(): Entity[] { return this._correctedEntities; }
 
-    constructor() { super();}
+    constructor() { super(); }
 
     /**
      * 管理対象のentityを追加する
      */
     addEntity(entity: Entity): void {
-        if (entity) {
+        if (entity && entity.enableCorrect) {
             entity.scene = this;
-            this._entities.push(entity);
+            this._correctedEntities.push(entity);
+        } else if (entity) {
+            this._noncorrectedEntities.push(entity);
         }
     }
 
@@ -96,16 +105,23 @@ export class SceneImpl extends EventTargetImpl implements Scene {
      * 指定されたEntityを削除する
      */
     removeEntity(entity: Entity): void {
-        var index = this._entities.indexOf(entity);
-        if (index !== -1) {
-            this._entities = this._entities.splice(index, 1);
+        if (entity !== null) {
+            var index = this._correctedEntities.indexOf(entity);
+            if (index !== -1) {
+                this._correctedEntities = this._correctedEntities.splice(index, 1);
+                entity.listener.fire(EventConstants.REMOVE, null);
+            } else {
+                this._noncorrectedEntities = this._noncorrectedEntities.splice(index, 1);
+                entity.listener.fire(EventConstants.REMOVE, null);
+            }
         }
     }
 
     // 指定されたcontextに対してレンダリングを行う
     render(context: animation.Context): void {
         context.clear();
-        this._entities.forEach(elem => elem.render(context));
+        this._correctedEntities.forEach(elem => elem.render(context));
+        this._noncorrectedEntities.forEach(elem => elem.render(context));
     }
 }
 
@@ -122,7 +138,11 @@ export interface Entity extends animation.Symbolize {
     scene: Scene;
 
     // このクラスに関連づけられたEventTarget
-    listener : EventTarget ;
+    listener: EventTarget;
+
+    // Sceneに追加されたとき、sceneのentitiesとして返却されるかどうか。
+    // falseだと追加されずに、renderの対象としてのみ動作する。
+    enableCorrect: bool;
 }
 
 export module BaseClasses {
@@ -130,6 +150,7 @@ export module BaseClasses {
     // 渡されたSymbolオブジェクトを、Entityとして扱うためのプロキシクラス。
     export class EntityProxy implements Entity {
         private _symbol: animation.Symbolize;
+        enableCorrect: bool = true;
 
         // 各プロパティに対するgetter
         get x(): number { return this._symbol.x; }
@@ -147,7 +168,7 @@ export module BaseClasses {
         set zIndex(_z: number) { this._symbol.zIndex = _z; }
         set visible(v: bool) { this._symbol.visible = v; }
         scene: Scene = null;
-        listener : EventTarget;
+        listener: EventTarget;
 
         constructor(symbol: animation.Symbolize) {
             this._symbol = symbol;
@@ -229,6 +250,7 @@ export module BaseClasses {
 
     // Entityの基本実装を提供する。Entityは、イベントを受けることが可能。
     export class EntityImpl extends animation.Symbol implements Entity {
+        enableCorrect: bool = true;
         scene: Scene = null;
         listener: EventTarget = new EventTargetImpl();
 
@@ -245,10 +267,7 @@ export module BaseClasses {
         within(other: Entity, distance? = -1): bool {
             return Intersector.within(this, other, distance);
         }
-
-
     }
-
 }
 
 // フレームベースでの更新処理を提供するゲームクラス。レンダリングが呼び出されるタイミング
@@ -292,8 +311,12 @@ export class Game {
         elem.addEventListener("touchstart", (e: MouseEvent) => {
             this.currentScene.fire(EventConstants.TOUCH_START, e);
         });
-        elem.addEventListener("click", (e: MouseEvent) => {
+        elem.addEventListener("mousedown", (e: MouseEvent) => {
             this.currentScene.fire(EventConstants.TOUCH_START, e);
+        });
+
+        elem.addEventListener("mouseup", (e: MouseEvent) => {
+            this.currentScene.fire(EventConstants.TOUCH_END, e);
         });
 
         var canvas = <HTMLCanvasElement>elem;
@@ -387,9 +410,11 @@ export module Physics {
 
         // 指定したtargetを持つadapterを削除する。
         remove(target: BodyBinder): void {
-            this._binders = this._binders.filter((value, index, array) => {
-                array[index] !== target
-            });
+            var index = this._binders.indexOf(target);
+            if (index !== -1) {
+                this._binders = this._binders.splice(index, 1);
+                this.removeBody(target.body);
+            }
         }
 
         // 指定したBodyを環境から取り除く。

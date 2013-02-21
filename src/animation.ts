@@ -1,6 +1,4 @@
 
-import util = module('util');
-
 // canvas element only.
 export module Common {
 
@@ -91,7 +89,6 @@ export module Common {
         }
     }
 }
-
 
 // レンダリング可能なオブジェクトが実装するインターフェース
 export interface Renderable {

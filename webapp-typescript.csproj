@@ -70,6 +70,7 @@
     <Content Include="lib\Box2dWeb.d.ts" />
     <Content Include="lib\enchant.d.ts" />
     <Content Include="lib\jquery.d.ts" />
+    <TypeScriptCompile Include="src\timeline.ts" />
     <TypeScriptCompile Include="src\animation.ts" />
     <TypeScriptCompile Include="src\main.ts" />
     <TypeScriptCompile Include="src\firework.ts" />

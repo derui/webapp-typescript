@@ -21,6 +21,7 @@ game.onload = (g) => {
     var showCase = new Firework.StarCase(game.width, game.height);
     showCase.initialize(world.worldScale);
     showCase.walls.forEach((value) => {
+        value.enableCorrect = false;
         game.currentScene.addEntity(value);
     });
     showCase.wallShapes.forEach((value, index, array) => {
@@ -49,13 +50,20 @@ game.onload = (g) => {
         if (++count == 20) {
             count = 0;
             var star = new Firework.Star();
+            var body = new GL.Physics.BodyBinder(
+                star, star.createFixture(world.worldScale));
             star.color = rc();
             star.x = 100;
             star.y = 0;
-            star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchedHandler(game.currentScene));
+            star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchStartHandler(game.currentScene));
+            star.listener.on(GL.EventConstants.TOUCH_END, star.makeTouchEndHandler(game.currentScene));
+            star.listener.on(GL.EventConstants.REMOVE, (e) => {
+                // entityが削除されたら、関連するbodyも削除する。
+                world.remove(body);
+            });
+            
             game.currentScene.addEntity(star);
-            world.add(new GL.Physics.BodyBinder(
-                star, star.createFixture(world.worldScale)));
+            world.add(body);
             star_count++;
         }
 
@@ -63,8 +71,25 @@ game.onload = (g) => {
         world.step(1 / game.fps, 3, 3);
     });
 
-    game.currentScene.on(GL.EventConstants.TOUCH_START, (event: MouseEvent) => {
+    //game.currentScene.on(GL.EventConstants.TOUCH_START, (event: MouseEvent) => {
 
+    //    var entities = game.currentScene.entities;
+    //    var vec = animation.Common.Vector;
+    //    // クリックした座標に星が存在するかどうかを調べる。
+    //    entities = entities.filter((elem) => {
+    //        var center = new vec.Vector2D(elem.x + elem.width / 2,
+    //        elem.y + elem.height / 2);
+    //        var touched = new vec.Vector2D(event.clientX, event.clientY);
+
+    //        return center.sub(touched).norm() < elem.width / 2;
+    //    });
+    //    entities.forEach((elem) => {
+    //        elem.listener.fire(GL.EventConstants.TOUCH_START, event);
+    //    });
+    //});
+
+    game.currentScene.on(GL.EventConstants.TOUCH_END, (event: MouseEvent) => {
+        console.log(event);
         var entities = game.currentScene.entities;
         var vec = animation.Common.Vector;
         // クリックした座標に星が存在するかどうかを調べる。
@@ -76,7 +101,7 @@ game.onload = (g) => {
             return center.sub(touched).norm() < elem.width / 2;
         });
         entities.forEach((elem) => {
-            elem.listener.fire(GL.EventConstants.TOUCH_START, event);
+            elem.listener.fire(GL.EventConstants.TOUCH_END, event);
         });
     });
 
