@@ -1,7 +1,16 @@
-﻿define(["require", "exports"], function(require, exports) {
+define(["require", "exports"], function(require, exports) {
     function isNum(x) {
         return x != null && x instanceof Number;
     }
+    function remove(x, o) {
+        var len = x.length;
+        for(var i = len; i >= 0; --i) {
+            if(x[i] === o) {
+                x.splice(i, 1);
+            }
+        }
+    }
+    exports.remove = remove;
     var String = (function () {
         function String() { }
         String.zeroPadding = // zero padding.
@@ -21,7 +30,7 @@
         return String;
     })();
     exports.String = String;    
-    // •W€‚Ì˜A‘z”z—ñ‚Æ‚Íˆá‚¤AŒ^ˆÀ‘S‚È˜A‘z”z—ñiƒWƒFƒlƒŠƒNƒX•K—vj
+    // �W���̘A�z�z���Ƃ͈Ⴄ�A�^���S�ȘA�z�z���i�W�F�l���N�X�K�v�j
     var Map = (function () {
         function Map() {
         }
@@ -49,4 +58,3 @@
     })();
     exports.Map = Map;    
 })
-//@ sourceMappingURL=util.js.map

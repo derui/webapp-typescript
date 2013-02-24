@@ -1,19 +1,21 @@
 
 /**
- * ���ԃx�[�X�ł̃A�j���[�V�������s���I�u�W�F�N�g�̃C���^�[�t�F�[�X�B
- * ��{�I�ɂ̓��\�b�h�`�F�C���ōs����悤�ɂ���B
- * ��{�I�ȏ����ɂ��ẮATimelineImpl�Ŏ�������Ă���
+ * 時間ベースでのアニメーションを行うオブジェクトのインターフェース。
+ * 基本的にはメソッドチェインで行われるようにする。
+ * 基本的な処理については、TimelineImplで実装されている
  */
 export interface Timeline {
 
-    // �w�肵���t���[�����������āAx/y�����ړ�����
+    // 指定したフレームだけかけて、x/yだけ移動する
     moveBy(x: number, y: number, frame: number): Timeline;
-    // �w�肵���t���[�������āAx/y�Ɉړ�����
+    // 指定したフレームかけて、x/yに移動する
     moveTo(x: number, y: number, frame: number): Timeline;
 
-    // �w�肵���t���[�������āAs�ɃX�P�[������
+    // 指定したフレームかけて、sにスケールする
     scale(s: number, frame: number): Timeline;
 
-    // �w�肵���ʒu�𒆐S�Ƃ��āA�w�肵���t���[�������āAs�ɃX�P�[������
+    // 指定した位置を中心として、指定したフレームかけて、sにスケールする
     scaleWithCenter(s: number, x: number, y: number, frame: number): Timeline;
 }
+
+class Timeline {}

@@ -105,15 +105,12 @@ export class SceneImpl extends EventTargetImpl implements Scene {
      * 指定されたEntityを削除する
      */
     removeEntity(entity: Entity): void {
-        if (entity !== null) {
-            var index = this._correctedEntities.indexOf(entity);
-            if (index !== -1) {
-                this._correctedEntities = this._correctedEntities.splice(index, 1);
-                entity.listener.fire(EventConstants.REMOVE, null);
-            } else {
-                this._noncorrectedEntities = this._noncorrectedEntities.splice(index, 1);
-                entity.listener.fire(EventConstants.REMOVE, null);
-            }
+        if (entity !== null && entity.enableCorrect) {
+            util.remove(this._correctedEntities, entity);
+            entity.listener.fire(EventConstants.REMOVE, null);
+        } else {
+            util.remove(this._noncorrectedEntities, entity);
+            entity.listener.fire(EventConstants.REMOVE, null);
         }
     }
 
@@ -198,7 +195,7 @@ export module BaseClasses {
 
     // Entity同士の衝突判定処理をまとめて提供するクラス。このクラス自体に影響するような
     // 処理は存在しない
-    module Intersector {
+    export module Intersector {
         // 二つの矩形に対するあたり判定を行う。触れている状態の場合は、intersectとは判定しない
         export function intersect(one: Entity, other: Entity): bool {
             if (one == null || other == null) {
@@ -233,7 +230,7 @@ export module BaseClasses {
 
         // ちょうどdistanceの距離となる場合は、withinと判定しない
         export function within(one: Entity, other: Entity, distance? = -1): bool {
-            if (distance == -1) {
+            if (distance === -1) {
                 // distanceが設定されない場合、互いのwidth/heightの平均値が利用される
                 distance = (one.width + other.width + one.height + other.height) / 4;
             }
@@ -241,7 +238,7 @@ export module BaseClasses {
             // Entityのx/y座標は、すべて矩形の左上座標を表すため、一度それぞれの中心座標を計算する。
             var vec = animation.Common.Vector;
             var oneC = new vec.Vector2D(one.x + one.width / 2, one.y + one.height / 2);
-            var otherC = new vec.Vector2D(one.x + one.width / 2, one.y + one.height / 2);
+            var otherC = new vec.Vector2D(other.x + other.width / 2, other.y + other.height / 2);
             var dist = oneC.sub(otherC).norm();
 
             return dist < distance;
@@ -410,9 +407,8 @@ export module Physics {
 
         // 指定したtargetを持つadapterを削除する。
         remove(target: BodyBinder): void {
-            var index = this._binders.indexOf(target);
-            if (index !== -1) {
-                this._binders = this._binders.splice(index, 1);
+            if (target !== null) {
+                util.remove(this._binders, target);
                 this.removeBody(target.body);
             }
         }

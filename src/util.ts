@@ -3,6 +3,15 @@ function isNum(x:Object) : bool {
     return x != null && x instanceof Number;
 }
 
+export function remove(x:any[], o:any) : void {
+    var len = x.length;
+    for (var i = len; i >= 0; --i) {
+        if (x[i] === o) {
+            x.splice(i, 1);
+        }
+    }
+}
+
 export class String {
 
     // zero padding.

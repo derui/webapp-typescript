@@ -1,4 +1,4 @@
-﻿define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
+define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
     /// <reference path='../lib/jquery.d.ts' />
     /// <reference path='../lib/Box2dWeb.d.ts' />
     var GL = __GL__;
@@ -34,7 +34,7 @@
         var count = 0;
         var star_count = 0;
         game.currentScene.on(GL.EventConstants.ENTER_FRAME, function (e) {
-            if(++count == 20) {
+            if(++count == game.fps) {
                 count = 0;
                 var star = new Firework.Star();
                 var body = new GL.Physics.BodyBinder(star, star.createFixture(world.worldScale));
@@ -44,45 +44,30 @@
                 star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchStartHandler(game.currentScene));
                 star.listener.on(GL.EventConstants.TOUCH_END, star.makeTouchEndHandler(game.currentScene));
                 star.listener.on(GL.EventConstants.REMOVE, function (e) {
-                    // entity‚ªíœ‚³‚ê‚½‚çAŠÖ˜A‚·‚ébody‚àíœ‚·‚éB
+                    // entity���폜���ꂽ���A�֘A����body���폜�����B
                     world.remove(body);
                 });
                 game.currentScene.addEntity(star);
                 world.add(body);
                 star_count++;
             }
-            // •¨—¢ŠE‚ðXV‚·‚éB
+            // �������E���X�V�����B
             world.step(1 / game.fps, 3, 3);
         });
-        //game.currentScene.on(GL.EventConstants.TOUCH_START, (event: MouseEvent) => {
-        //    var entities = game.currentScene.entities;
-        //    var vec = animation.Common.Vector;
-        //    // ƒNƒŠƒbƒN‚µ‚½À•W‚É¯‚ª‘¶Ý‚·‚é‚©‚Ç‚¤‚©‚ð’²‚×‚éB
-        //    entities = entities.filter((elem) => {
-        //        var center = new vec.Vector2D(elem.x + elem.width / 2,
-        //        elem.y + elem.height / 2);
-        //        var touched = new vec.Vector2D(event.clientX, event.clientY);
-        //        return center.sub(touched).norm() < elem.width / 2;
-        //    });
-        //    entities.forEach((elem) => {
-        //        elem.listener.fire(GL.EventConstants.TOUCH_START, event);
-        //    });
-        //});
         game.currentScene.on(GL.EventConstants.TOUCH_END, function (event) {
-            console.log(event);
             var entities = game.currentScene.entities;
             var vec = animation.Common.Vector;
-            // ƒNƒŠƒbƒN‚µ‚½À•W‚É¯‚ª‘¶Ý‚·‚é‚©‚Ç‚¤‚©‚ð’²‚×‚éB
+            // �N���b�N�������W�ɐ������݂��邩�ǂ����𒲂ׂ��B
             entities = entities.filter(function (elem) {
                 var center = new vec.Vector2D(elem.x + elem.width / 2, elem.y + elem.height / 2);
                 var touched = new vec.Vector2D(event.clientX, event.clientY);
-                return center.sub(touched).norm() < elem.width / 2;
+                center.sub(touched).norm() < elem.width / 2;
             });
             entities.forEach(function (elem) {
                 elem.listener.fire(GL.EventConstants.TOUCH_END, event);
             });
         });
-        // 10ƒtƒŒ[ƒ€–ˆ‚É¯‚ð¶¬‚·‚éB
+        // 10�t���[�����ɐ��𐶐������B
         // game.rootScene.tl.then(() => {
         //     var star = new GL.Firework.Star(16, 16);
         //     star.setColor(rc());
@@ -96,7 +81,7 @@
             var x = e.accelerationIncludingGravity.x;
             var y = e.accelerationIncludingGravity.y;
             var z = e.accelerationIncludingGravity.z;
-            // xy‚ÌŒX‚«‚ðŽg‚¤
+            // xy�̌X�����g��
             var gravity = {
                 x: 0,
                 y: 0,
@@ -109,4 +94,3 @@
     };
     game.start();
 })
-//@ sourceMappingURL=main.js.map

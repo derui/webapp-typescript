@@ -1,4 +1,4 @@
-﻿var __extends = this.__extends || function (d, b) {
+var __extends = this.__extends || function (d, b) {
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
     d.prototype = new __();
@@ -72,13 +72,13 @@ define(["require", "exports"], function(require, exports) {
         })();
         Common.Rect = Rect;        
         (function (Vector) {
-            // äºŒæ¬¡å…ƒãƒ™ã‚¯ãƒˆãƒ«ã‚’è¿”ã™ã€‚åŸºæœ¬çš„ã«ãƒã‚§ãƒ¼ãƒ³ãƒ¡ã‚½ãƒƒãƒ‰ã§ç¹‹ã’ã‚‰ã‚Œã‚‹ã‚ˆã†ã«ãªã£ã¦ã„ã‚‹ã€‚
+            // 二次元ベクトルを返す。基本的にチェーンメソッドで繋げられるようになっている。
             var Vector2D = (function () {
                 function Vector2D(x, y) {
                     this.x = x;
                     this.y = y;
                 }
-                Vector2D.prototype.normalize = // ã“ã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’normalizeã—ãŸã‚‚ã®ã‚’è¿”ã™ã€‚
+                Vector2D.prototype.normalize = // このオブジェクトをnormalizeしたものを返す。
                 function () {
                     var norm = this.norm();
                     this.x /= norm;
@@ -94,21 +94,21 @@ define(["require", "exports"], function(require, exports) {
                     }
                     return this.x * v.x + this.y * v.y;
                 };
-                Vector2D.prototype.add = // è‡ªèº«ã«æ¸¡ã•ã‚ŒãŸãƒ™ã‚¯ãƒˆãƒ«ã‚’åŠ ç®—ã—ãŸæ–°ã—ã„ãƒ™ã‚¯ãƒˆãƒ«ã‚’è¿”ã™
+                Vector2D.prototype.add = // 自身に渡されたベクトルを加算した新しいベクトルを返す
                 function (v) {
                     return new Vector2D(this.x + v.x, this.y + v.y);
                 };
-                Vector2D.prototype.sub = // è‡ªèº«ã«æ¸¡ã•ã‚ŒãŸãƒ™ã‚¯ãƒˆãƒ«ã‚’æ¸›ç®—ã—ãŸæ–°ã—ã„ãƒ™ã‚¯ãƒˆãƒ«ã‚’è¿”ã™
+                Vector2D.prototype.sub = // 自身に渡されたベクトルを減算した新しいベクトルを返す
                 function (v) {
                     return new Vector2D(this.x - v.x, this.y - v.y);
                 };
-                Vector2D.prototype.scale = // è‡ªèº«ã‚’scaleã—ãŸVectorã‚’è¿”ã™
+                Vector2D.prototype.scale = // 自身をscaleしたVectorを返す
                 function (s) {
                     this.x *= s;
                     this.y *= s;
                     return this;
                 };
-                Vector2D.prototype.invert = // è‡ªèº«ã‚’é€†å‘ãã«ã—ã¦ã€è‡ªèº«ã‚’è¿”ã™ã€‚
+                Vector2D.prototype.invert = // 自身を逆向きにして、自身を返す。
                 function () {
                     this.x *= -1;
                     this.y *= -1;
@@ -121,9 +121,9 @@ define(["require", "exports"], function(require, exports) {
         var Vector = Common.Vector;
     })(exports.Common || (exports.Common = {}));
     var Common = exports.Common;
-    // æç”»å¯èƒ½ãªã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åŸºåº•ã‚¯ãƒ©ã‚¹
+    // 描画可能なオブジェクトの基底クラス
     var Symbol = (function () {
-        // ãã‚Œãžã‚Œã®å€¤ã«ã¤ã„ã¦ã€åˆæœŸå€¤ã‚’è¨­å®šã™ã‚‹è²¬ä»»ã¯ã€ã“ã®ã‚¯ãƒ©ã‚¹ã‚’ç¶™æ‰¿ã—ãŸå…ˆã®ã‚¯ãƒ©ã‚¹ã«ã‚ã‚‹
+        // それぞれの値について、初期値を設定する責任は、このクラスを継承した先のクラスにある
         function Symbol(x, y, width, height, visible, zIndex) {
             if (typeof x === "undefined") { x = 0; }
             if (typeof y === "undefined") { y = 0; }
@@ -138,7 +138,7 @@ define(["require", "exports"], function(require, exports) {
             this.visible = visible;
             this.zIndex = zIndex;
         }
-        Symbol.prototype.render = // ã“ã®ã‚¯ãƒ©ã‚¹ã®ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ã¯ä½•ã‚‚è¡Œã‚ãªã„
+        Symbol.prototype.render = // このクラスのレンダリングは何も行わない
         function (context) {
         };
         Symbol.prototype.moveBy = function (x, y) {
@@ -152,11 +152,11 @@ define(["require", "exports"], function(require, exports) {
         return Symbol;
     })();
     exports.Symbol = Symbol;    
-    // ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã«å¯¾ã—ã¦ã€å„ç¨®ã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ç®¡ç†ã™ã‚‹ãŸã‚ã®
-    // singletonãªã‚¯ãƒ©ã‚¹
-    // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’å®Ÿè¡Œã—ãŸã„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã¯ã€Animaã‹ã‚‰ç”Ÿæˆã•ã‚Œã‚‹ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
-    // ã‚’å–å¾—ã—ã€å„ãƒ•ãƒ¬ãƒ¼ãƒ ã”ã¨ã«Animaã®æ›´æ–°å‡¦ç†ã‚’è¡Œã†ã“ã¨ã§ã€å…¨ä½“ã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ã€æ™‚é–“ãƒ™ãƒ¼ã‚¹ã§
-    // ä¸€æ¥µç®¡ç†ã™ã‚‹ã“ã¨ãŒã§ãã‚‹ã€‚
+    // レンダリングターゲットに対して、各種のアニメーションを管理するための
+    // singletonなクラス
+    // アニメーションを実行したいオブジェクトは、Animaから生成されるアニメーションオブジェクト
+    // を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
+    // 一極管理することができる。
     var Anima = (function () {
         function Anima() { }
         Anima._instance = null;
@@ -169,7 +169,7 @@ define(["require", "exports"], function(require, exports) {
         return Anima;
     })();
     exports.Anima = Anima;    
-    // æç”»ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®æç”»å…ˆã¨ãªã‚‹ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã‚¯ãƒ©ã‚¹
+    // 描画オブジェクトの描画先となるコンテキストクラス
     var Context = (function () {
         function Context(canvas) {
             this._width = 0;
@@ -219,9 +219,9 @@ define(["require", "exports"], function(require, exports) {
         return InvalidCanvasException;
     })();
     exports.InvalidCanvasException = InvalidCanvasException;    
-    // CanvasGradientã‚’ãƒ©ãƒƒãƒ”ãƒ³ã‚°ã—ãŸã‚¯ãƒ©ã‚¹ã‚’æä¾›ã™ã‚‹ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
+    // CanvasGradientをラッピングしたクラスを提供するモジュール
     (function (Gradietion) {
-        // ç·šå½¢ã‚°ãƒ©ãƒ‡ã‚£ã‚¨ãƒ¼ã‚·ãƒ§ãƒ³ã‚¯ãƒ©ã‚¹
+        // 線形グラディエーションクラス
         var Linear = (function () {
             function Linear(context) {
                 if(context.contextEnabled) {
@@ -260,7 +260,7 @@ define(["require", "exports"], function(require, exports) {
             return Linear;
         })();
         Gradietion.Linear = Linear;        
-        // å††å½¢ã‚°ãƒ©ãƒ‡ã‚£ã‚¨ãƒ¼ã‚·ãƒ§ãƒ³ã‚¯ãƒ©ã‚¹
+        // 円形グラディエーションクラス
         var Radial = (function () {
             function Radial(context) {
                 if(context.contextEnabled) {
@@ -307,7 +307,7 @@ define(["require", "exports"], function(require, exports) {
     var Gradietion = exports.Gradietion;
     var Util;
     (function (Util) {
-        // saveã€œrestoreã‚’ãƒ©ãƒƒãƒ—ã—ãŸã‚¯ãƒ©ã‚¹ã‚’æä¾›ã™ã‚‹
+        // save〜restoreをラップしたクラスを提供する
         var ContextWrapper = (function () {
             function ContextWrapper(context, callback) {
                 if(callback != null && context != null) {
@@ -320,9 +320,9 @@ define(["require", "exports"], function(require, exports) {
         })();
         Util.ContextWrapper = ContextWrapper;        
     })(Util || (Util = {}));
-    // Canvasã®ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã‚’ãƒ™ãƒ¼ã‚¹ã«ã—ãŸå„ç¨®å›³å½¢ã®æç”»æ©Ÿèƒ½ã‚’æä¾›ã™ã‚‹
+    // Canvasのコンテキストをベースにした各種図形の描画機能を提供する
     (function (Shapes) {
-        // å††
+        // 円
         var Circle = (function (_super) {
             __extends(Circle, _super);
             function Circle(radius) {
@@ -344,8 +344,8 @@ define(["require", "exports"], function(require, exports) {
             });
             Circle.prototype.render = function (context) {
                 var ctx = context.context;
-                // ã‚°ãƒ©ãƒ‡ã‚£ã‚¨ãƒ¼ã‚·ãƒ§ãƒ³ãŒè¨­å®šå¯èƒ½ã§ã‚ã‚‹å ´åˆã¯è¨­å®šã™ã‚‹
-                // è¨­å®šå¯èƒ½ã§ã¯ãªã„å ´åˆã¯ã€baseColorã‚’æ”¹ã‚ã¦è¨­å®šã™ã‚‹
+                // グラディエーションが設定可能である場合は設定する
+                // 設定可能ではない場合は、baseColorを改めて設定する
                 if(this._gradient) {
                     ctx.fillStyle = this._gradient.raw();
                 } else {
@@ -358,7 +358,7 @@ define(["require", "exports"], function(require, exports) {
             return Circle;
         })(Symbol);
         Shapes.Circle = Circle;        
-        // çŸ©å½¢
+        // 矩形
         var Box = (function (_super) {
             __extends(Box, _super);
             function Box(width, height) {
@@ -381,7 +381,7 @@ define(["require", "exports"], function(require, exports) {
                 var _this = this;
                 new Util.ContextWrapper(context, function (context) {
                     var ctx = context.context;
-                    // ã‚°ãƒ©ãƒ‡ã‚£ã‚¨ãƒ¼ã‚·ãƒ§ãƒ³ãŒè¨­å®šå¯èƒ½ã§ã‚ã‚‹å ´åˆã¯è¨­å®šã™ã‚‹
+                    // グラディエーションが設定可能である場合は設定する
                     if(_this._gradient) {
                         ctx.fillStyle = _this._gradient.raw();
                     }
@@ -398,4 +398,3 @@ define(["require", "exports"], function(require, exports) {
     })(exports.Shapes || (exports.Shapes = {}));
     var Shapes = exports.Shapes;
 })
-//@ sourceMappingURL=animation.js.map
