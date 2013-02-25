@@ -1,4 +1,4 @@
-define(["require", "exports"], function(require, exports) {
+﻿define(["require", "exports"], function(require, exports) {
     function isNum(x) {
         return x != null && x instanceof Number;
     }
@@ -30,7 +30,7 @@ define(["require", "exports"], function(require, exports) {
         return String;
     })();
     exports.String = String;    
-    // �W���̘A�z�z���Ƃ͈Ⴄ�A�^���S�ȘA�z�z���i�W�F�l���N�X�K�v�j
+    // •W€‚Ì˜A‘z”z—ñ‚Æ‚Íˆá‚¤AŒ^ˆÀ‘S‚È˜A‘z”z—ñiƒWƒFƒlƒŠƒNƒX•K—vj
     var Map = (function () {
         function Map() {
         }
@@ -58,3 +58,4 @@ define(["require", "exports"], function(require, exports) {
     })();
     exports.Map = Map;    
 })
+//@ sourceMappingURL=util.js.map

@@ -202,6 +202,19 @@ export module Gradietion {
         raw(): CanvasGradient;
     }
 
+    // 何の処理も行わないGradient
+    export class NullGradient implements Gradient {
+        constructor () {}
+        clear(): void {}
+        colorStop(offset: number, color: string): Gradient {
+            return this;
+        }
+
+        raw(): CanvasGradient {
+            return null;
+        }
+    }
+
     // 線形グラディエーションクラス
     export class Linear implements Gradient {
         private _linearGradient: CanvasGradient;
@@ -327,42 +340,54 @@ module Util {
 }
 
 // Canvasのコンテキストをベースにした各種図形の描画機能を提供する
-export module Shapes {
+// ここで提供するのはあくまで描画機能のみであり、その他については提供しない
+export module Renderer {
 
-    // 円
-    export class Circle extends Symbol {
+    export class BaseData {
+        gradient: Gradietion.Gradient = new Gradietion.NullGradient();
+        color: Common.Color = new Common.Color();
+        x: number = 0;
+        y: number = 0;
+        zIndex: number = 0;
+        width: number = 0;
+        height: number = 0;
 
-        private _gradient: Gradietion.Gradient;
-        baseColor : Common.Color = new Common.Color();
+        constructor() { }
+    }
 
-        set gradient(g: Gradietion.Gradient) { this._gradient = g; }
+    // 円をレンダリングする機能を提供する。
+    export module Circle {
 
-        constructor(public radius: number) {
-            super();
-            this.x = 0;
-            this.y = 0;
-            this.width = radius * 2;
-            this.height = radius * 2;
-            this.zIndex = 0;
+        // 円をレンダリングする際のデータ
+        export class Data extends BaseData {
+            constructor(public x: number, public y: number, public radius: number) {
+                super();
+            }
         }
 
-        render(context: Context): void {
+        // 所持するデータをもとに、contextに円をレンダリングするクラス
+        class Circle implements Renderable {
+            constructor(public data: Data) { }
 
-            var ctx = context.context;
+            render(context: Context): void {
 
-            // グラディエーションが設定可能である場合は設定する
-            // 設定可能ではない場合は、baseColorを改めて設定する
-            if (this._gradient) {
-                ctx.fillStyle = this._gradient.raw();
-            } else {
-                ctx.fillStyle = this.baseColor.toFillStyle();
+                var ctx = context.context;
+                var dat = this.data;
+
+                // グラディエーションが設定可能である場合は設定する
+                // 設定可能ではない場合は、baseColorを改めて設定する
+                if (dat.gradient) {
+                    ctx.fillStyle = dat.gradient.raw();
+                } else {
+                    ctx.fillStyle = dat.color.toFillStyle();
+                }
+
+                ctx.beginPath();
+                ctx.arc(dat.x + dat.radius, dat.y + dat.radius,
+                        dat.radius, 0, Math.PI * 2, true);
+
+                ctx.fill();
             }
-
-            ctx.beginPath();
-            ctx.arc(this.x + this.radius, this.y + this.radius,
-                    this.radius, 0, Math.PI * 2, true);
-
-            ctx.fill();
         }
     }
 

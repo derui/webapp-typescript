@@ -1,15 +1,14 @@
-var __extends = this.__extends || function (d, b) {
+﻿var __extends = this.__extends || function (d, b) {
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "animation", "gameLib"], function(require, exports, __animation__, __gl__) {
+define(["require", "exports", "gameLib"], function(require, exports, __gl__) {
     
-    var animation = __animation__;
-
+    
     var gl = __gl__;
 
-    // �I�u�W�F�N�g�̎��ʂ��\��
+    // ƒIƒuƒWƒFƒNƒg‚ÌŽí•Ê‚ð•\‚·
     var ObjectType;
     (function (ObjectType) {
         ObjectType._map = [];
@@ -18,7 +17,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         ObjectType._map[1] = "Star";
         ObjectType.Star = 1;
     })(ObjectType || (ObjectType = {}));
-    // �I�u�W�F�N�g�̏��Ԃ��\��
+    // ƒIƒuƒWƒFƒNƒg‚Ìó‘Ô‚ð•\‚·
     var ObjectState;
     (function (ObjectState) {
         ObjectState._map = [];
@@ -33,7 +32,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         ObjectState._map[4] = "Launch";
         ObjectState.Launch = 4;
     })(ObjectState || (ObjectState = {}));
-    // B2Body��userData�ɓo�^��������
+    // B2Body‚ÌuserData‚É“o˜^‚·‚éî•ñ
     var ObjectInfo = (function () {
         function ObjectInfo(type) {
             this.type = type;
@@ -41,7 +40,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         }
         return ObjectInfo;
     })();    
-    // Star�ŗ��p�����Ă����e������
+    // Star‚Å—˜—p‚³‚ê‚Ä‚¢‚éŠeŽíî•ñ
     var StarUtil;
     (function (StarUtil) {
         var StarSize;
@@ -56,7 +55,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             StarSize._map[3] = "VerySmall";
             StarSize.VerySmall = 3;
         })(StarSize || (StarSize = {}));
-        // StarSize���烉���_���ł����ꂩ���擾����
+        // StarSize‚©‚çƒ‰ƒ“ƒ_ƒ€‚Å‚¢‚¸‚ê‚©‚ðŽæ“¾‚·‚é
         function getSomeType() {
             switch(Math.floor(Math.random() * 4)) {
                 case 0:
@@ -84,20 +83,20 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         StarUtil.getSomeSize = getSomeSize;
     })(StarUtil || (StarUtil = {}));
     (function (GameObj) {
-        // �estar�ŋ��ʂ���FixtureDefinition
+        // Šestar‚Å‹¤’Ê‚·‚éFixtureDefinition
         var _fixDef = (function () {
             var fix = new Box2D.Dynamics.b2FixtureDef();
-            fix.density = 1.0// ���x
+            fix.density = 1.0// –§“x
             ;
-            fix.friction = 1.5// ���C�W��
+            fix.friction = 1.5// –€ŽCŒW”
             ;
-            fix.restitution = 0.2// �����W��
+            fix.restitution = 0.2// ”½”­ŒW”
             ;
             return fix;
         })();
-        // Star�ɌW�郍�W�b�N���ӂ̏������S�������B
-        // StarLogic���̂�Star�ɃR���|�W�V���������Ă��邪�A
-        // StarLogic�ɂ�Star���n�����Ă����B
+        // Star‚ÉŒW‚éƒƒWƒbƒNŽü•Ó‚Ìˆ—‚ð’S“–‚·‚éB
+        // StarLogicŽ©‘Ì‚ÍStar‚ÉƒRƒ“ƒ|ƒWƒVƒ‡ƒ“‚³‚ê‚Ä‚¢‚é‚ªA
+        // StarLogic‚É‚àStar‚ª“n‚³‚ê‚Ä‚¢‚éB
         var StarLogic = (function () {
             function StarLogic(starShape) {
                 this.starShape = starShape;
@@ -113,7 +112,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                         contacts.push(n.other);
                     }
                 }
-                // �����m��4�ȏ��אڂ������Astatic�ɕύX�����B
+                // ¯“¯Žm‚ª4‚ÂˆÈã—×Ú‚µ‚½‚çAstatic‚É•ÏX‚·‚éB
                 if(contacts.length >= 4 && this.isConnectable()) {
                     contacts.filter(function (e) {
                         var info_e = e.GetUserData();
@@ -135,7 +134,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             StarLogic.prototype.isConnectable = function () {
                 return this._state.objectState === ObjectState.Free;
             };
-            StarLogic.prototype.ontouchstart = // �^�b�`���J�n�����ۂ̏����B
+            StarLogic.prototype.ontouchstart = // ƒ^ƒbƒ`‚ðŠJŽn‚µ‚½Û‚Ìˆ—B
             function (scene, e) {
                 var s = this.starShape;
                 if(this._state.objectState !== ObjectState.PrepareLaunch) {
@@ -149,8 +148,8 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 }
                 return true;
             };
-            StarLogic.prototype.ontouchend = // �^�b�`���ė����ꂽ�Ƃ��A���̎��_�ł̗̈��ɂ������Ă��鐯��
-            // �����āA���g���g�傷���B
+            StarLogic.prototype.ontouchend = // ƒ^ƒbƒ`‚µ‚Ä—£‚³‚ê‚½‚Æ‚«A‚»‚ÌŽž“_‚Å‚Ì—Ìˆæ‚É‚©‚©‚Á‚Ä‚¢‚é¯‚ð
+            // Á‚µ‚ÄAŽ©g‚ðŠg‘å‚·‚éB
             function (scene, e) {
                 var _this = this;
                 if(this._state.objectState === ObjectState.PrepareLaunch) {
@@ -167,7 +166,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 contain.forEach(function (elem) {
                     scene.removeEntity(elem);
                 });
-                // ���̂̏������X�V�����B
+                // „‘Ì‚Ìî•ñ‚ðXV‚·‚éB
                 var s = this.starShape;
                 s.x -= s.radius;
                 s.y -= s.radius;
@@ -179,17 +178,17 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 var fixDef = this._fixDef;
                 fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(s.radius / this._scale);
                 s.body.CreateFixture(fixDef);
-                // �����i�K�͏I���Ƃ���
+                // €”õ’iŠK‚ÍI—¹‚Æ‚·‚é
                 this._state.objectState = ObjectState.PrepareLaunch;
                 return true;
             };
             return StarLogic;
         })();        
-        // ���C���̃I�u�W�F�N�g�ƂȂ�Star
+        // ƒƒCƒ“‚ÌƒIƒuƒWƒFƒNƒg‚Æ‚È‚éStar
         var Star = (function (_super) {
             __extends(Star, _super);
             function Star() {
-                        _super.call(this, StarUtil.getSomeSize());
+                _super.call(this, StarUtil.getSomeSize());
                 this._starLogic = new StarLogic(this);
             }
             Object.defineProperty(Star.prototype, "color", {
@@ -205,17 +204,17 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             Star.prototype.isConnectable = function () {
                 this._logic.isConnectable();
             };
-            Star.prototype.onreflect = // body�����f�[�^�𔽉f�������ۂɌĂяo�������R�[���o�b�N
+            Star.prototype.onreflect = // body‚©‚çƒf[ƒ^‚ð”½‰f‚³‚¹‚éÛ‚ÉŒÄ‚Ño‚³‚ê‚éƒR[ƒ‹ƒoƒbƒN
             function () {
                 return this._logic.onreflect();
             };
-            Star.prototype.render = // star�������_�����O�����B�����_�����O�������̂́Acircle��render�ɔC�����B
+            Star.prototype.render = // star‚ðƒŒƒ“ƒ_ƒŠƒ“ƒO‚·‚éBƒŒƒ“ƒ_ƒŠƒ“ƒOˆ—Ž©‘Ì‚ÍAcircle‚Ìrender‚É”C‚¹‚éB
             function (context) {
                 var r = this._circle.radius;
                 var grad = new animation.Gradietion.Radial(context);
                 grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
                 var info = this.body.GetUserData();
-                // �A�����Ă����ꍇ�́A�D�F�x�[�X�̐F�ɂ��Ă��܂�
+                // ˜AŒ‹‚µ‚Ä‚¢‚éê‡‚ÍAŠDFƒx[ƒX‚ÌF‚É‚µ‚Ä‚µ‚Ü‚¤
                 switch(this._state.objectState) {
                     case ObjectState.Connected:
                         grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
@@ -230,7 +229,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 this._circle.gradient = grad;
                 this._circle.render(context);
             };
-            Star.prototype.createFixture = // �n���ꂽstar�ɓK������body�̐ݒ����쐬�����B
+            Star.prototype.createFixture = // “n‚³‚ê‚½star‚É“K‡‚·‚ébody‚ÌÝ’è‚ðì¬‚·‚éB
             function (scale) {
                 var fixDef = this._fixDef;
                 var bodyDef = new Box2D.Dynamics.b2BodyDef();
@@ -245,41 +244,34 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                     fixtureDef: fixDef
                 };
             };
-            Star.prototype.makeTouchStartHandler = // ontouchstart�̃n���h�����쐬���ĕԂ��B
+            Star.prototype.makeTouchStartHandler = // ontouchstart‚Ìƒnƒ“ƒhƒ‰‚ðì¬‚µ‚Ä•Ô‚·B
             function (scene) {
                 var _this = this;
                 return function (e) {
                     _this._logic.ontouchstart(scene, e);
                 };
             };
-            Star.prototype.makeTouchEndHandler = // ontouchend�̃n���h�����쐬���ĕԂ�
+            Star.prototype.makeTouchEndHandler = // ontouchend‚Ìƒnƒ“ƒhƒ‰‚ðì¬‚µ‚Ä•Ô‚·
             function (scene) {
                 var _this = this;
                 return function (e) {
                     _this._logic.ontouchend(scene, e);
                 };
             };
-            Star.prototype.within = function (other, distance) {
-                if (typeof distance === "undefined") { distance = -1; }
-                return gl.BaseClasses.Intersector.within(this, other, distance);
-            };
-            Star.prototype.intersect = function (other) {
-                return gl.BaseClasses.Intersector.intersect(this, other);
-            };
             return Star;
-        })(animation.Shapes.Circle);
+        })(gl.BaseClasses.EntityImpl);
         GameObj.Star = Star;        
         var StarCaseOption = (function () {
             function StarCaseOption() {
-                // ���E���ǂ̕�
+                // ¶‰E—¼•Ç‚Ì•
                 this.sideWallThickness = 10;
-                // �n�ʂ̌���
+                // ’n–Ê‚ÌŒú‚Ý
                 this.groundThickness = 10;
             }
             return StarCaseOption;
         })();
         GameObj.StarCaseOption = StarCaseOption;        
-        // width / height�ɂ��Ă͂܂��I�u�W�F�N�g�𐶐������B
+        // width / height‚É‚ ‚Ä‚Í‚Ü‚éƒIƒuƒWƒFƒNƒg‚ð¶¬‚·‚éB
         var StarCase = (function () {
             function StarCase(width, height) {
                 this.width = width;
@@ -293,7 +285,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 this.walls.push(this.createWall(0, 0, sideThick, this.height));
                 this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
                 this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
-                // �����ō쐬�����鍄�̂́A�����߂�Sprite�̔{�ɑ������鍄�̂Ƃ���
+                // ‚±‚±‚Åì¬‚³‚ê‚é„‘Ì‚ÍAŒ©‚½‚ß‚ÌSprite‚Ì”{‚É‘Š“–‚·‚é„‘Ì‚Æ‚·‚é
                 this.wallShapes.push(this.createShape(scale, -sideThick, 0, sideThick * 2, this.height * 2));
                 this.wallShapes.push(this.createShape(scale, this.width - sideThick, 0, sideThick * 2, this.height * 2));
                 this.wallShapes.push(this.createShape(scale, 0, this.height - ground, this.width * 2, ground * 2));
@@ -301,14 +293,14 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 this.rightBound = this.width - sideThick;
                 this.groundBound = this.height - ground;
             };
-            StarCase.prototype.createWall = // �ǂɑ�������sprite������
+            StarCase.prototype.createWall = // •Ç‚É‘Š“–‚·‚ésprite‚ðì‚é
             function (x, y, w, h) {
                 var p = new animation.Shapes.Box(w, h);
                 p.x = x;
                 p.y = y;
                 return new gl.BaseClasses.EntityProxy(p);
             };
-            StarCase.prototype.createShape = // �ǂɑ������鍄�̂������B
+            StarCase.prototype.createShape = // •Ç‚É‘Š“–‚·‚é„‘Ì‚ðì‚éB
             function (scale, x, y, w, h) {
                 var b2BodyDef = Box2D.Dynamics.b2BodyDef, b2Body = Box2D.Dynamics.b2Body, b2FixtureDef = Box2D.Dynamics.b2FixtureDef, b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape;
                 var fixDef = new b2FixtureDef();
@@ -332,3 +324,4 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
     })(exports.GameObj || (exports.GameObj = {}));
     var GameObj = exports.GameObj;
 })
+//@ sourceMappingURL=firework.js.map

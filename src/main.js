@@ -1,12 +1,11 @@
-define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
+﻿define(["require", "exports", "gameLib", "firework"], function(require, exports, __GL__, __Firework__) {
     /// <reference path='../lib/jquery.d.ts' />
     /// <reference path='../lib/Box2dWeb.d.ts' />
     var GL = __GL__;
 
     var Firework = __Firework__;
 
-    var animation = __animation__;
-
+    
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     var game = new GL.Game(240, 320);
     game.fps = 60;
@@ -44,20 +43,20 @@ define(["require", "exports", "gameLib", "firework", "animation"], function(requ
                 star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchStartHandler(game.currentScene));
                 star.listener.on(GL.EventConstants.TOUCH_END, star.makeTouchEndHandler(game.currentScene));
                 star.listener.on(GL.EventConstants.REMOVE, function (e) {
-                    // entity���폜���ꂽ���A�֘A����body���폜�����B
+                    // entity‚ªíœ‚³‚ê‚½‚çAŠÖ˜A‚·‚ébody‚àíœ‚·‚éB
                     world.remove(body);
                 });
                 game.currentScene.addEntity(star);
                 world.add(body);
                 star_count++;
             }
-            // �������E���X�V�����B
+            // •¨—¢ŠE‚ðXV‚·‚éB
             world.step(1 / game.fps, 3, 3);
         });
         game.currentScene.on(GL.EventConstants.TOUCH_END, function (event) {
             var entities = game.currentScene.entities;
             var vec = animation.Common.Vector;
-            // �N���b�N�������W�ɐ������݂��邩�ǂ����𒲂ׂ��B
+            // ƒNƒŠƒbƒN‚µ‚½À•W‚É¯‚ª‘¶Ý‚·‚é‚©‚Ç‚¤‚©‚ð’²‚×‚éB
             entities = entities.filter(function (elem) {
                 var center = new vec.Vector2D(elem.x + elem.width / 2, elem.y + elem.height / 2);
                 var touched = new vec.Vector2D(event.clientX, event.clientY);
@@ -67,7 +66,7 @@ define(["require", "exports", "gameLib", "firework", "animation"], function(requ
                 elem.listener.fire(GL.EventConstants.TOUCH_END, event);
             });
         });
-        // 10�t���[�����ɐ��𐶐������B
+        // 10ƒtƒŒ[ƒ€–ˆ‚É¯‚ð¶¬‚·‚éB
         // game.rootScene.tl.then(() => {
         //     var star = new GL.Firework.Star(16, 16);
         //     star.setColor(rc());
@@ -81,7 +80,7 @@ define(["require", "exports", "gameLib", "firework", "animation"], function(requ
             var x = e.accelerationIncludingGravity.x;
             var y = e.accelerationIncludingGravity.y;
             var z = e.accelerationIncludingGravity.z;
-            // xy�̌X�����g��
+            // xy‚ÌŒX‚«‚ðŽg‚¤
             var gravity = {
                 x: 0,
                 y: 0,
@@ -94,3 +93,4 @@ define(["require", "exports", "gameLib", "firework", "animation"], function(requ
     };
     game.start();
 })
+//@ sourceMappingURL=main.js.map

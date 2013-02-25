@@ -173,7 +173,7 @@ export module GameObj {
     }
 
     // メインのオブジェクトとなるStar
-    export class Star extends animation.Shapes.Circle implements IStar {
+    export class Star extends gl.BaseClasses.EntityImpl implements IStar {
 
         private _logic : StarLogic;
 
@@ -246,14 +246,6 @@ export module GameObj {
             return (e: Event) => {
                 this._logic.ontouchend(scene, e);
             }
-        }
-
-        within(other:gl.Entity, distance? = -1): bool {
-            return gl.BaseClasses.Intersector.within(this, other, distance);
-        }
-
-        intersect(other:gl.Entity) : bool {
-            return gl.BaseClasses.Intersector.intersect(this, other);
         }
     }
 
