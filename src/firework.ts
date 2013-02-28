@@ -79,10 +79,10 @@ export module GameObj {
     // StarLogicにもStarが渡されている。
     class StarLogic {
 
-        _state: ObjectInfo = new ObjectInfo(ObjectType.Star);
-        _scale: number = 1;
+        state: ObjectInfo = new ObjectInfo(ObjectType.Star);
+        scale: number = 1;
 
-        constructor(public starShape:Star) {}
+        constructor(public starShape: Star) { }
 
         onreflect(): bool {
             var body = this.starShape.body;
@@ -116,20 +116,20 @@ export module GameObj {
         }
 
         isConnectable() : bool {
-            return this._state.objectState === ObjectState.Free;
+            return this.state.objectState === ObjectState.Free;
         }
 
         // タッチを開始した際の処理。
         ontouchstart(scene: gl.Scene, e:Event) : bool {
             var s = this.starShape;
-            if (this._state.objectState !== ObjectState.PrepareLaunch) {
+            if (this.state.objectState !== ObjectState.PrepareLaunch) {
                 s.x -= s.width;
                 s.y -= s.height;
                 s.radius *= 2;
                 s.width *= 2;
                 s.height *= 2;
                 s.baseColor.a = 0.3;
-                this._state.objectState = ObjectState.PrepareLaunch;
+                this.state.objectState = ObjectState.PrepareLaunch;
             }
             return true;
         }
@@ -137,7 +137,7 @@ export module GameObj {
         // タッチして離されたとき、その時点での領域にかかっている星を
         // 消して、自身を拡大する。
         ontouchend(scene: gl.Scene, e:Event) : bool {
-            if (this._state.objectState === ObjectState.PrepareLaunch) {
+            if (this.state.objectState === ObjectState.PrepareLaunch) {
                 return false;
             }
             var s = <gl.Entity>this.starShape;
@@ -166,7 +166,7 @@ export module GameObj {
             s.body.CreateFixture(fixDef);
 
             // 準備段階は終了とする
-            this._state.objectState = ObjectState.PrepareLaunch;
+            this.state.objectState = ObjectState.PrepareLaunch;
             return true;
         }
 
@@ -175,48 +175,57 @@ export module GameObj {
     // メインのオブジェクトとなるStar
     export class Star extends gl.BaseClasses.EntityImpl implements IStar {
 
-        private _logic : StarLogic;
+        private _logic: StarLogic;
+        private _renderer: animation.Renderer.Circle.CircleRenderer;
 
         body: B2Body;
+        private baseData: animation.Renderer.Circle.Data;
 
-        set color(col:animation.Common.Color) { this._circle.baseColor = col;}
+        set color(col:animation.Common.Color) { this.baseData.color = col;}
 
         constructor() {
-            super(StarUtil.getSomeSize());
-            this._starLogic = new StarLogic(this)
+            super();
+            this.baseData = new animation.Renderer.Circle.Data(0, 0, StarUtil.getSomeSize());
+            this._renderer = new animation.Renderer.Circle.CircleRenderer(this.baseData);
+
+            this._logic = new StarLogic(this);
+
+            util.propBind([util.binder("x"), { name: "y" }, { name: "zIndex" }, { name: "width" }, { name: "height" },
+                { name: "visible" }, { name: "radius" }], this, this.baseData);
         }
 
         isValid(): bool {
             return true;
         }
 
-        isConnectable() : bool {this._logic.isConnectable();}
+        isConnectable() : bool {return this._logic.isConnectable();}
 
         // bodyからデータを反映させる際に呼び出されるコールバック
         onreflect(): bool { return this._logic.onreflect();}
 
         // starをレンダリングする。レンダリング処理自体は、circleのrenderに任せる。
         render(context: animation.Context): void {
-            var r = this._circle.radius;
+            
+
+            var r = this.baseData.radius;
             var grad = new animation.Gradietion.Radial(context);
             grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
             var info: ObjectInfo = this.body.GetUserData();
 
             // 連結している場合は、灰色ベースの色にしてしまう
-            switch (this._state.objectState) {
+            switch (this._logic.state.objectState) {
             case ObjectState.Connected:
                 grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
                 break;
             case ObjectState.PrepareLaunch:
-                grad.colorStop(0.0, this._circle.baseColor.toFillStyle()).colorStop(1.0, this._circle.baseColor.toFillStyle());
+                grad.colorStop(0.0, this.baseData.color.toFillStyle()).colorStop(1.0, this.baseData.color.toFillStyle());
                 break;
             default:
-                grad.colorStop(0.0, "#fff").colorStop(0.5, this._circle.baseColor.toFillStyle()).
+                grad.colorStop(0.0, "#fff").colorStop(0.5, this.baseData.color.toFillStyle()).
                     colorStop(1.0, "#000");
             }
-            this.syncParam();
-            this._circle.gradient = grad;
-            this._circle.render(context);
+            this.baseData.gradient = grad;
+            this._renderer.render(context);
         }
 
         // 渡されたstarに適合するbodyの設定を作成する。
@@ -230,21 +239,21 @@ export module GameObj {
             bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
             fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.width / 2 / scale);
 
-            this._logic._scale = scale;
+            this._logic.scale = scale;
             return { bodyDef: bodyDef, fixtureDef: fixDef };
         }
 
         // ontouchstartのハンドラを作成して返す。
         makeTouchStartHandler(scene: gl.Scene) : (e:Event) => bool {
             return (e:Event) => {
-                this._logic.ontouchstart(scene, e);
+                return this._logic.ontouchstart(scene, e);
             }
         }
 
         // ontouchendのハンドラを作成して返す
         makeTouchEndHandler(scene: gl.Scene): (e: Event) => bool {
             return (e: Event) => {
-                this._logic.ontouchend(scene, e);
+                return this._logic.ontouchend(scene, e);
             }
         }
     }

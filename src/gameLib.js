@@ -3,11 +3,12 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "util"], function(require, exports, __util__) {
+define(["require", "exports", "util", "animation"], function(require, exports, __util__, __animation__) {
     /// <reference path='../lib/Box2dWeb.d.ts' />
     var util = __util__;
 
-    
+    var animation = __animation__;
+
     var EventConstants = (function () {
         function EventConstants() { }
         EventConstants.TOUCH_START = "ontouchstart";
@@ -235,7 +236,7 @@ define(["require", "exports", "util"], function(require, exports, __util__) {
         var EntityImpl = (function (_super) {
             __extends(EntityImpl, _super);
             function EntityImpl() {
-                _super.call(this);
+                        _super.call(this);
                 this.enableCorrect = true;
                 this.scene = null;
                 this.listener = new EventTargetImpl();

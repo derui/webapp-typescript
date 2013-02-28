@@ -366,7 +366,7 @@ export module Renderer {
         }
 
         // 所持するデータをもとに、contextに円をレンダリングするクラス
-        class Circle implements Renderable {
+        export class CircleRenderer implements Renderable {
             constructor(public data: Data) { }
 
             render(context: Context): void {

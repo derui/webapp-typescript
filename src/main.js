@@ -1,11 +1,12 @@
-﻿define(["require", "exports", "gameLib", "firework"], function(require, exports, __GL__, __Firework__) {
+﻿define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
     /// <reference path='../lib/jquery.d.ts' />
     /// <reference path='../lib/Box2dWeb.d.ts' />
     var GL = __GL__;
 
     var Firework = __Firework__;
 
-    
+    var animation = __animation__;
+
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     var game = new GL.Game(240, 320);
     game.fps = 60;
