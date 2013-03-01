@@ -75,7 +75,9 @@
     <TypeScriptCompile Include="src\main.ts" />
     <TypeScriptCompile Include="src\firework.ts" />
     <TypeScriptCompile Include="src\gameLib.ts" />
-    <TypeScriptCompile Include="src\util.ts" />
+    <TypeScriptCompile Include="src\util.ts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </TypeScriptCompile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="README.md" />

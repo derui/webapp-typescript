@@ -2,6 +2,7 @@
 import util = module("util");
 import animation = module("animation");
 import gl = module("gameLib");
+import I = util.Illiegals
 
 export interface ObjectBase {
     // オブジェクトが有効であるかを返す。
@@ -60,29 +61,29 @@ module StarUtil {
     }
 }
 
-export interface IStar extends gl.Entity, gl.Physics.BodyBindable, ObjectBase {
-}
+export interface IStar extends gl.Entity, gl.Physics.BodyBindable, ObjectBase { }
 
 export module GameObj {
-
-    // 各starで共通するFixtureDefinition
-    var _fixDef = (): B2FixtureDef => {
-        var fix = new Box2D.Dynamics.b2FixtureDef();
-        fix.density = 1.0;       // 密度
-        fix.friction = 1.5;      // 摩擦係数
-        fix.restitution = 0.2;   // 反発係数
-        return fix;
-    } ();
 
     // Starに係るロジック周辺の処理を担当する。
     // StarLogic自体はStarにコンポジションされているが、
     // StarLogicにもStarが渡されている。
     class StarLogic {
 
+
+        // 各starで共通するFixtureDefinition
+        private _fixDef = (): B2FixtureDef => {
+            var fix = new Box2D.Dynamics.b2FixtureDef();
+            fix.density = 1.0;       // 密度
+            fix.friction = 1.5;      // 摩擦係数
+            fix.restitution = 0.2;   // 反発係数
+            return fix;
+        } ();
+
         state: ObjectInfo = new ObjectInfo(ObjectType.Star);
         scale: number = 1;
 
-        constructor(public starShape: Star) { }
+        constructor(public starShape: Star, public data: animation.Renderer.Circle.Data) { }
 
         onreflect(): bool {
             var body = this.starShape.body;
@@ -125,10 +126,10 @@ export module GameObj {
             if (this.state.objectState !== ObjectState.PrepareLaunch) {
                 s.x -= s.width;
                 s.y -= s.height;
-                s.radius *= 2;
+                this.data.radius *= 2;
                 s.width *= 2;
                 s.height *= 2;
-                s.baseColor.a = 0.3;
+                this.data.color.a = 0.3;
                 this.state.objectState = ObjectState.PrepareLaunch;
             }
             return true;
@@ -140,10 +141,10 @@ export module GameObj {
             if (this.state.objectState === ObjectState.PrepareLaunch) {
                 return false;
             }
-            var s = <gl.Entity>this.starShape;
+            var s = this.starShape;
             var contain = scene.entities.filter((elem) => {
                 if (elem === s) return false;
-                var distance = this.starShape.radius * 2;
+                var distance = this.data.radius * 2;
                 return this.starShape.within(elem, distance);
             });
 
@@ -152,22 +153,39 @@ export module GameObj {
             });
 
             // 剛体の情報を更新する。
-            var s = this.starShape;
-            s.x -= s.radius;
-            s.y -= s.radius;
-            s.radius *= 2;
-            s.width *= 2;
-            s.height *= 2;
-
             s.body.SetType(Box2D.Dynamics.b2Body.b2_dynamicBody);
             s.body.DestroyFixture(s.body.GetFixtureList());
             var fixDef = this._fixDef;
-            fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(s.radius / this._scale);
+            fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.data.radius / this.scale);
             s.body.CreateFixture(fixDef);
+
+            s.x -= this.data.radius;
+            s.y -= this.data.radius;
+            this.data.radius *= 2;
+            s.width *= 2;
+            s.height *= 2;
+
+           
 
             // 準備段階は終了とする
             this.state.objectState = ObjectState.PrepareLaunch;
             return true;
+        }
+
+
+        // 渡されたstarに適合するbodyの設定を作成する。
+        createFixture(scale: number): gl.Physics.BodyDefinition {
+            var fixDef = this._fixDef;
+            var bodyDef = new Box2D.Dynamics.b2BodyDef();
+            bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
+            bodyDef.userData = this.state;
+            bodyDef.position.Set((this.data.x + this.data.width / 2) / scale,
+                                 (this.data.y + this.data.height / 2) / scale);
+            bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
+            fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.data.width / 2 / scale);
+
+            this.scale = scale;
+            return { bodyDef: bodyDef, fixtureDef: fixDef };
         }
 
     }
@@ -179,19 +197,21 @@ export module GameObj {
         private _renderer: animation.Renderer.Circle.CircleRenderer;
 
         body: B2Body;
-        private baseData: animation.Renderer.Circle.Data;
+        private data: animation.Renderer.Circle.Data;
 
-        set color(col:animation.Common.Color) { this.baseData.color = col;}
+        set color(col:animation.Common.Color) { this.data.color = col;}
 
         constructor() {
             super();
-            this.baseData = new animation.Renderer.Circle.Data(0, 0, StarUtil.getSomeSize());
-            this._renderer = new animation.Renderer.Circle.CircleRenderer(this.baseData);
+            this.data = new animation.Renderer.Circle.Data(0, 0, StarUtil.getSomeSize());
+            this._renderer = new animation.Renderer.Circle.CircleRenderer(this.data);
 
-            this._logic = new StarLogic(this);
+            this._logic = new StarLogic(this, this.data);
 
-            util.propBind([util.binder("x"), { name: "y" }, { name: "zIndex" }, { name: "width" }, { name: "height" },
-                { name: "visible" }, { name: "radius" }], this, this.baseData);
+            // バインドしておく
+            I.propBind([I.binder("x"), I.binder("y"), I.binder("zIndex"),
+                I.binder("width"), I.binder("height"),
+                I.binder("visible"), I.binder("radius")], this, this.data);
         }
 
         isValid(): bool {
@@ -207,7 +227,7 @@ export module GameObj {
         render(context: animation.Context): void {
             
 
-            var r = this.baseData.radius;
+            var r = this.data.radius;
             var grad = new animation.Gradietion.Radial(context);
             grad.from(this.x + r * 0.7, this.y + r * 0.5, 1).to(this.x + r, this.y + r, r);
             var info: ObjectInfo = this.body.GetUserData();
@@ -218,29 +238,18 @@ export module GameObj {
                 grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
                 break;
             case ObjectState.PrepareLaunch:
-                grad.colorStop(0.0, this.baseData.color.toFillStyle()).colorStop(1.0, this.baseData.color.toFillStyle());
+                grad.colorStop(0.0, this.data.color.toFillStyle()).colorStop(1.0, this.data.color.toFillStyle());
                 break;
             default:
-                grad.colorStop(0.0, "#fff").colorStop(0.5, this.baseData.color.toFillStyle()).
+                grad.colorStop(0.0, "#fff").colorStop(0.5, this.data.color.toFillStyle()).
                     colorStop(1.0, "#000");
             }
-            this.baseData.gradient = grad;
+            this.data.gradient = grad;
             this._renderer.render(context);
         }
 
-        // 渡されたstarに適合するbodyの設定を作成する。
         createFixture(scale: number): gl.Physics.BodyDefinition {
-            var fixDef = this._fixDef;
-            var bodyDef = new Box2D.Dynamics.b2BodyDef();
-            bodyDef.type = Box2D.Dynamics.b2Body.b2_dynamicBody;
-            bodyDef.userData = this._state;
-            bodyDef.position.Set((this.x + this.width / 2) / scale,
-                                 (this.y + this.height / 2) / scale);
-            bodyDef.angularVelocity = (Math.random() * 2 % 2 ? -1 : 1) * 10;
-            fixDef.shape = new Box2D.Collision.Shapes.b2CircleShape(this.width / 2 / scale);
-
-            this._logic.scale = scale;
-            return { bodyDef: bodyDef, fixtureDef: fixDef };
+            return this._logic.createFixture(scale);
         }
 
         // ontouchstartのハンドラを作成して返す。
@@ -267,6 +276,24 @@ export module GameObj {
         // 地面の厚み
         groundThickness: number = 10;
     }
+
+    class Wall extends gl.BaseClasses.EntityImpl {
+
+        private data : animation.Renderer.Box.Data;
+        private _renderer: animation.Renderable;
+
+        constructor(width: number, height: number) {
+            super();
+            this.data = new animation.Renderer.Box.Data(0, 0, width, height);
+            this._renderer = new animation.Renderer.Box.BoxRenderer(this.data);
+
+            // バインドしておく
+            I.propBind([I.binder("x"), I.binder("y"), I.binder("zIndex"),
+                I.binder("width"), I.binder("height"),
+                I.binder("visible"), I.binder("radius")], this, this.data);
+        }
+    }
+
 
     // width / heightにあてはまるオブジェクトを生成する。
     export class StarCase {
@@ -304,10 +331,10 @@ export module GameObj {
 
         // 壁に相当するspriteを作る
         private createWall(x: number, y: number, w: number, h: number): gl.Entity {
-            var p = new animation.Shapes.Box(w, h);
+            var p = new Wall(w, h);
             p.x = x;
             p.y = y;
-            return new gl.BaseClasses.EntityProxy(p);
+            return p;
         }
 
         // 壁に相当する剛体を作る。

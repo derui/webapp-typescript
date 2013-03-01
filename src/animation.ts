@@ -3,9 +3,9 @@
 export module Common {
 
     export class Color {
-        constructor(public r=0, public g=0, public b=0, public a=1.0) {}
+        constructor(public r = 0, public g = 0, public b = 0, public a = 1.0) { }
 
-        toFillStyle() : string {
+        toFillStyle(): string {
             var colors = [this.r.toString(), this.g.toString(), this.b.toString(), this.a.toString()].join(',');
             return "rgba(" + colors + ")";
         }
@@ -13,12 +13,12 @@ export module Common {
 
     export class Rect {
 
-        get center() : Vector.Vector2D {return this.calcCenter();}
-        get width() : number {return this.left - this.right;}
-        get height() : number {return this.bottom - this.top;}
+        get center(): Vector.Vector2D { return this.calcCenter(); }
+        get width(): number { return this.left - this.right; }
+        get height(): number { return this.bottom - this.top; }
 
-        constructor(public left:number, public top:number,
-                    public right:number, public bottom:number) {
+        constructor(public left: number, public top: number,
+                    public right: number, public bottom: number) {
             this.center = this.calcCenter();
         }
 
@@ -29,7 +29,7 @@ export module Common {
                                      this.top + height / 2);
         }
 
-        set(left:number, top:number, right:number, bottom:number) {
+        set (left: number, top: number, right: number, bottom: number) {
             this.left = left;
             this.top = top;
             this.right = right;
@@ -41,21 +41,21 @@ export module Common {
 
         // 二次元ベクトルを返す。基本的にチェーンメソッドで繋げられるようになっている。
         export class Vector2D {
-            constructor(public x:number, public y:number) {}
+            constructor(public x: number, public y: number) { }
 
             // このオブジェクトをnormalizeしたものを返す。
-            normalize() : Vector2D {
+            normalize(): Vector2D {
                 var norm = this.norm();
                 this.x /= norm;
                 this.y /= norm;
                 return this;
             }
 
-            norm() : number {
+            norm(): number {
                 return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
             }
 
-            dot(v:Vector2D) :number {
+            dot(v: Vector2D): number {
                 if (v == null) {
                     return 0;
                 }
@@ -64,24 +64,24 @@ export module Common {
             }
 
             // 自身に渡されたベクトルを加算した新しいベクトルを返す
-            add(v:Vector2D) : Vector2D {
+            add(v: Vector2D): Vector2D {
                 return new Vector2D(this.x + v.x, this.y + v.y);
             }
 
             // 自身に渡されたベクトルを減算した新しいベクトルを返す
-            sub(v:Vector2D) : Vector2D {
+            sub(v: Vector2D): Vector2D {
                 return new Vector2D(this.x - v.x, this.y - v.y);
             }
 
             // 自身をscaleしたVectorを返す
-            scale(s:number) : Vector2D {
+            scale(s: number): Vector2D {
                 this.x *= s;
                 this.y *= s;
                 return this;
             }
 
             // 自身を逆向きにして、自身を返す。
-            invert() : Vector2D {
+            invert(): Vector2D {
                 this.x *= -1;
                 this.y *= -1;
                 return this;
@@ -111,9 +111,9 @@ export interface Symbolize extends Renderable {
     zIndex: number;
 
     // 指定されたx/y軸方向への距離分移動する
-    moveBy(x:number, y:number) : void;
+    moveBy(x: number, y: number): void;
     // 指定されたx/y座標に移動する
-    moveTo(x:number, y:number) : void;
+    moveTo(x: number, y: number): void;
 }
 
 // 描画可能なオブジェクトの基底クラス
@@ -128,12 +128,12 @@ export class Symbol implements Symbolize {
     // このクラスのレンダリングは何も行わない
     render(context: Context): void { }
 
-    moveBy(x:number, y:number) {
+    moveBy(x: number, y: number) {
         this.x += x;
         this.y += y;
     }
 
-    moveTo(x:number, y:number) {
+    moveTo(x: number, y: number) {
         this.x = x;
         this.y = y;
     }
@@ -197,15 +197,15 @@ export module Gradietion {
 
     // グラディエーションクラスのインターフェース
     export interface Gradient {
-        clear() : void;
+        clear(): void;
         colorStop(offset: number, color: string): Gradient;
         raw(): CanvasGradient;
     }
 
     // 何の処理も行わないGradient
     export class NullGradient implements Gradient {
-        constructor () {}
-        clear(): void {}
+        constructor() { }
+        clear(): void { }
         colorStop(offset: number, color: string): Gradient {
             return this;
         }
@@ -230,7 +230,7 @@ export module Gradietion {
             }
         }
 
-        clear() : void {
+        clear(): void {
             this._fromX = 0;
             this._fromY = 0;
             this._toX = 0;
@@ -284,7 +284,7 @@ export module Gradietion {
             }
         }
 
-        clear() : void {
+        clear(): void {
             this._fromX = 0;
             this._fromY = 0;
             this._fromR = 0;
@@ -391,35 +391,39 @@ export module Renderer {
         }
     }
 
-    // 矩形
-    export class Box extends Symbol {
+    export module Box {
 
-        private _gradient: Gradietion.Gradient;
-        set gradient(g: Gradietion.Gradient) { this._gradient = g; }
-        isFill: bool = true;
-
-        constructor(public width: number, public height: number) {
-            super();
-            this.x = 0;
-            this.y = 0;
-            this.zIndex = 0;
+        // 矩形をレンダリングする際のデータ
+        export class Data extends BaseData {
+            constructor(public x: number, public y: number, public width: number, height:number) {
+                super();
+            }
         }
+        // 矩形
+        export class BoxRenderer implements Renderable {
 
-        render(context: Context): void {
-            new Util.ContextWrapper(context, (context) => {
+            isFill: bool = true;
 
-                var ctx = context.context;
-                // グラディエーションが設定可能である場合は設定する
-                if (this._gradient) {
-                    ctx.fillStyle = this._gradient.raw();
-                }
+            constructor(public data: Data) { }
 
-                if (this.isFill) {
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
-                } else {
-                    ctx.rect(this.x, this.y, this.width, this.height);
-                }
-            });
+            render(context: Context): void {
+                new Util.ContextWrapper(context, (context) => {
+
+                    var ctx = context.context;
+                    // グラディエーションが設定可能である場合は設定する
+                    if (this.data.gradient) {
+                        ctx.fillStyle = this.data.gradient.raw();
+                    }
+
+                    if (this.isFill) {
+                        ctx.fillRect(this.data.x, this.data.y, this.data.width, this.data.height);
+                    } else {
+                        ctx.rect(this.data.x, this.data.y, this.data.width, this.data.height);
+                    }
+                });
+            }
         }
     }
+
+
 }

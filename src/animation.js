@@ -389,43 +389,45 @@ define(["require", "exports"], function(require, exports) {
             Circle.CircleRenderer = CircleRenderer;            
         })(Renderer.Circle || (Renderer.Circle = {}));
         var Circle = Renderer.Circle;
-        // çŸ©å½¢
-        var Box = (function (_super) {
-            __extends(Box, _super);
-            function Box(width, height) {
-                        _super.call(this);
-                this.width = width;
-                this.height = height;
-                this.isFill = true;
-                this.x = 0;
-                this.y = 0;
-                this.zIndex = 0;
-            }
-            Object.defineProperty(Box.prototype, "gradient", {
-                set: function (g) {
-                    this._gradient = g;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Box.prototype.render = function (context) {
-                var _this = this;
-                new Util.ContextWrapper(context, function (context) {
-                    var ctx = context.context;
-                    // ã‚°ãƒ©ãƒ‡ã‚£ã‚¨ãƒ¼ã‚·ãƒ§ãƒ³ãŒè¨­å®šå¯èƒ½ã§ã‚ã‚‹å ´åˆã¯è¨­å®šã™ã‚‹
-                    if(_this._gradient) {
-                        ctx.fillStyle = _this._gradient.raw();
-                    }
-                    if(_this.isFill) {
-                        ctx.fillRect(_this.x, _this.y, _this.width, _this.height);
-                    } else {
-                        ctx.rect(_this.x, _this.y, _this.width, _this.height);
-                    }
-                });
-            };
-            return Box;
-        })(Symbol);
-        Renderer.Box = Box;        
+        (function (Box) {
+            // çŸ©å½¢ã‚’ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ã™ã‚‹éš›ã®ãƒ‡ãƒ¼ã‚¿
+            var Data = (function (_super) {
+                __extends(Data, _super);
+                function Data(x, y, width, height) {
+                                _super.call(this);
+                    this.x = x;
+                    this.y = y;
+                    this.width = width;
+                }
+                return Data;
+            })(BaseData);
+            Box.Data = Data;            
+            // çŸ©å½¢
+            var BoxRenderer = (function () {
+                function BoxRenderer(data) {
+                    this.data = data;
+                    this.isFill = true;
+                }
+                BoxRenderer.prototype.render = function (context) {
+                    var _this = this;
+                    new Util.ContextWrapper(context, function (context) {
+                        var ctx = context.context;
+                        // ã‚°ãƒ©ãƒ‡ã‚£ã‚¨ãƒ¼ã‚·ãƒ§ãƒ³ãŒè¨­å®šå¯èƒ½ã§ã‚ã‚‹å ´åˆã¯è¨­å®šã™ã‚‹
+                        if(_this.data.gradient) {
+                            ctx.fillStyle = _this.data.gradient.raw();
+                        }
+                        if(_this.isFill) {
+                            ctx.fillRect(_this.data.x, _this.data.y, _this.data.width, _this.data.height);
+                        } else {
+                            ctx.rect(_this.data.x, _this.data.y, _this.data.width, _this.data.height);
+                        }
+                    });
+                };
+                return BoxRenderer;
+            })();
+            Box.BoxRenderer = BoxRenderer;            
+        })(Renderer.Box || (Renderer.Box = {}));
+        var Box = Renderer.Box;
     })(exports.Renderer || (exports.Renderer = {}));
     var Renderer = exports.Renderer;
 })

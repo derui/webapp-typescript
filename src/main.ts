@@ -18,7 +18,7 @@ game.onload = (g) => {
 
     var b2Vec2 = Box2D.Common.Math.b2Vec2;
 
-    var showCase = new Firework.StarCase(game.width, game.height);
+    var showCase = new Firework.GameObj.StarCase(game.width, game.height);
     showCase.initialize(world.worldScale);
     showCase.walls.forEach((value) => {
         value.enableCorrect = false;
@@ -49,7 +49,7 @@ game.onload = (g) => {
 
         if (++count == game.fps) {
             count = 0;
-            var star = new Firework.Star();
+            var star = new Firework.GameObj.Star();
             var body = new GL.Physics.BodyBinder(
                 star, star.createFixture(world.worldScale));
             star.color = rc();

@@ -62,44 +62,43 @@ export class Map {
     }
 }
 
-export interface PropertyMapping {
-    // バインドするプロパティ。同名でなければならない。
-    name: string;
+// 型に頓着しないような処理を提供するモジュール。
+// TODO: ジェネリクスが使えるようになった時点で、この部分の処理について分散できる場所は分散する
+export module Illiegals {
 
-    // Getterを生成しないかどうか。true以外の場合は生成する
-    noGetterBind: bool;
-    // Setterを生成しないかどうか。true以外の場合は生成する
-    noSetterBind: bool;
-}
+    export interface PropertyMapping {
+        // バインドするプロパティ。同名でなければならない。
+        name: string;
 
-class PropertyMappingImpl {
-
-    constructor(public name: string, public noGetterBind: bool, public noSetterBind: bool) { }
-
-}
-
-export function binder(name: string, noGetterBind = false, noSetterBind = false): PropertyMapping {
-    return { name: name, noGetterBind : noGetterBind, noSetterBind : noSetterBind }
-}
-
-// JavaScript側の機能を利用して、クラスに動的にsetterとgetterを生成する。
-// Mixinが出来たら不要になる可能性がある。
-// @param src any setter/getterを生成するオブジェクト
-// @param dst any setter/getterから値を取得/設定するオブジェクト
-export function propBind(mappings: PropertyMapping[], src: any, dst: any) :void {
-    if (mappings === null) {
-        return;
+        // Getterを生成しないかどうか。true以外の場合は生成する
+        noGetterBind: bool;
+        // Setterを生成しないかどうか。true以外の場合は生成する
+        noSetterBind: bool;
     }
 
-    mappings.forEach((mapping) => {
-        if (src[mapping.name] && dst[mapping.name]) {
-            if (mapping.noGetterBind) {
-                src[mapping.name] = function () { return dst[mapping.name]; }
-            }
+    export function binder(name: string, noGetterBind = false, noSetterBind = false): PropertyMapping {
+        return { name: name, noGetterBind: noGetterBind, noSetterBind: noSetterBind }
+    }
 
-            if (mapping.noSetterBind) {
-                src[mapping.name] = function (e) { dst[mapping.name] = e; }
-            }
+    // JavaScript側の機能を利用して、クラスに動的にsetterとgetterを生成する。
+    // Mixinが出来たら不要になる可能性がある。
+    // @param src any setter/getterを生成するオブジェクト
+    // @param dst any setter/getterから値を取得/設定するオブジェクト
+    export function propBind(mappings: PropertyMapping[], src: any, dst: any): void {
+        if (mappings === null) {
+            return;
         }
-    });
+
+        mappings.forEach((mapping) => {
+            if (src[mapping.name] && dst[mapping.name]) {
+                if (mapping.noGetterBind) {
+                    src[mapping.name] = function () { return dst[mapping.name]; }
+                }
+
+                if (mapping.noSetterBind) {
+                    src[mapping.name] = function (e) { dst[mapping.name] = e; }
+                }
+            }
+        });
+    }
 }
