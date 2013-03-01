@@ -14,6 +14,15 @@ interface DeviceMotionEvent extends Event {
 
 game.fps = 60;
 
+function isContainPosition(x:number, y:number, elem:GL.Entity) : bool {
+    var vec = animation.Common.Vector;
+    var center = new vec.Vector2D(elem.x + elem.width / 2,
+                                  elem.y + elem.height / 2);
+    var touched = new vec.Vector2D(x, y);
+
+    return center.sub(touched).norm() < elem.width / 2;
+}
+
 game.onload = (g) => {
 
     var b2Vec2 = Box2D.Common.Math.b2Vec2;
@@ -50,11 +59,11 @@ game.onload = (g) => {
         if (++count == game.fps) {
             count = 0;
             var star = new Firework.GameObj.Star();
-            var body = new GL.Physics.BodyBinder(
-                star, star.createFixture(world.worldScale));
             star.color = rc();
             star.x = 100;
             star.y = 0;
+            var body = new GL.Physics.BodyBinder(
+                star, star.createFixture(world.worldScale));
             star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchStartHandler(game.currentScene));
             star.listener.on(GL.EventConstants.TOUCH_END, star.makeTouchEndHandler(game.currentScene));
             star.listener.on(GL.EventConstants.REMOVE, (e) => {
@@ -73,17 +82,25 @@ game.onload = (g) => {
 
     game.currentScene.on(GL.EventConstants.TOUCH_END, (event: MouseEvent) => {
         var entities = game.currentScene.entities;
-        var vec = animation.Common.Vector;
         // クリックした座標に星が存在するかどうかを調べる。
         entities = entities.filter((elem) => {
-            var center = new vec.Vector2D(elem.x + elem.width / 2,
-            elem.y + elem.height / 2);
-            var touched = new vec.Vector2D(event.clientX, event.clientY);
-
-            center.sub(touched).norm() < elem.width / 2;
+            return isContainPosition(event.clientX, event.clientY, elem)
         });
+
         entities.forEach((elem) => {
             elem.listener.fire(GL.EventConstants.TOUCH_END, event);
+        });
+    });
+
+    game.currentScene.on(GL.EventConstants.TOUCH_START, (event: MouseEvent) => {
+        var entities = game.currentScene.entities;
+        // クリックした座標に星が存在するかどうかを調べる。
+        entities = entities.filter((elem) => {
+            return isContainPosition(event.clientX, event.clientY, elem)
+        });
+
+        entities.forEach((elem) => {
+            elem.listener.fire(GL.EventConstants.TOUCH_START, event);
         });
     });
 

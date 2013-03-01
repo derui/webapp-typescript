@@ -1,4 +1,4 @@
-﻿define(["require", "exports"], function(require, exports) {
+define(["require", "exports"], function(require, exports) {
     function isNum(x) {
         return x != null && x instanceof Number;
     }
@@ -30,7 +30,7 @@
         return String;
     })();
     exports.String = String;    
-    // •W€‚Ì˜A‘z”z—ñ‚Æ‚Íˆá‚¤AŒ^ˆÀ‘S‚È˜A‘z”z—ñiƒWƒFƒlƒŠƒNƒX•K—vj
+    // �W���̘A�z�z���Ƃ͈Ⴄ�A�^���S�ȘA�z�z���i�W�F�l���N�X�K�v�j
     var Map = (function () {
         function Map() {
         }
@@ -57,8 +57,8 @@
         return Map;
     })();
     exports.Map = Map;    
-    // Œ^‚É“Ú’…‚µ‚È‚¢‚æ‚¤‚Èˆ—‚ð’ñ‹Ÿ‚·‚éƒ‚ƒWƒ…[ƒ‹B
-    // TODO: ƒWƒFƒlƒŠƒNƒX‚ªŽg‚¦‚é‚æ‚¤‚É‚È‚Á‚½Žž“_‚ÅA‚±‚Ì•”•ª‚Ìˆ—‚É‚Â‚¢‚Ä•ªŽU‚Å‚«‚éêŠ‚Í•ªŽU‚·‚é
+    // �^�ɓڒ����Ȃ��悤�ȏ������񋟂��郂�W���[���B
+    // TODO: �W�F�l���N�X���g�����悤�ɂȂ������_�ŁA���̕����̏����ɂ��ĕ��U�ł����ꏊ�͕��U����
     (function (Illiegals) {
         function binder(name, noGetterBind, noSetterBind) {
             if (typeof noGetterBind === "undefined") { noGetterBind = false; }
@@ -70,25 +70,30 @@
             };
         }
         Illiegals.binder = binder;
-        // JavaScript‘¤‚Ì‹@”\‚ð—˜—p‚µ‚ÄAƒNƒ‰ƒX‚É“®“I‚Ésetter‚Ægetter‚ð¶¬‚·‚éB
-        // Mixin‚ªo—ˆ‚½‚ç•s—v‚É‚È‚é‰Â”\«‚ª‚ ‚éB
-        // @param src any setter/getter‚ð¶¬‚·‚éƒIƒuƒWƒFƒNƒg
-        // @param dst any setter/getter‚©‚ç’l‚ðŽæ“¾/Ý’è‚·‚éƒIƒuƒWƒFƒNƒg
+        // JavaScript���̋@�\�𗘗p���āA�N���X�ɓ��I��setter��getter�𐶐������B
+        // Mixin���o�������s�v�ɂȂ��\���������B
+        // getter/setter���쐬���鑤�ɓ����̃v���p�e�B�����݂����K�v�͖����B
+        // @param src any setter/getter�𐶐������I�u�W�F�N�g
+        // @param dst any setter/getter�����l���擾/�ݒ肷���I�u�W�F�N�g
         function propBind(mappings, src, dst) {
             if(mappings === null) {
                 return;
             }
             mappings.forEach(function (mapping) {
-                if(src[mapping.name] && dst[mapping.name]) {
-                    if(mapping.noGetterBind) {
-                        src[mapping.name] = function () {
-                            return dst[mapping.name];
-                        };
+                if(dst[mapping.name] !== undefined) {
+                    if(!mapping.noGetterBind) {
+                        Object.defineProperty(src, mapping.name, {
+                            get: function () {
+                                return dst[mapping.name];
+                            }
+                        });
                     }
-                    if(mapping.noSetterBind) {
-                        src[mapping.name] = function (e) {
-                            dst[mapping.name] = e;
-                        };
+                    if(!mapping.noSetterBind) {
+                        Object.defineProperty(src, mapping.name, {
+                            set: function (val) {
+                                dst[mapping.name] = val;
+                            }
+                        });
                     }
                 }
             });
@@ -97,4 +102,3 @@
     })(exports.Illiegals || (exports.Illiegals = {}));
     var Illiegals = exports.Illiegals;
 })
-//@ sourceMappingURL=util.js.map

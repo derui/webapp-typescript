@@ -47,6 +47,12 @@ export interface Group extends EventTarget {
 
     // 指定されたcontextに対してレンダリングを行う
     render(context: animation.Context): void;
+
+    // 管理対象のentityに対して、Timelineが登録されている場合には、
+    // Entityに対してTimelineを進める。
+    // 自分自身のonenterframeイベントが登録されている場合は、他のtimeline
+    // が発行される前に、自分自身のonenterframeが実行される。
+    doFrame() : void;
 }
 
 // ゲーム内における各シーンのインターフェース。
@@ -83,7 +89,7 @@ export class SceneImpl extends EventTargetImpl implements Scene {
 
     // 各シーンに存在するオブジェクト
     private _correctedEntities: Entity[] = [];
-    private _noncorrectedEntities: Entity[] = [];
+    private _nonCorrectedEntities: Entity[] = [];
 
     get entities(): Entity[] { return this._correctedEntities; }
 
@@ -93,11 +99,11 @@ export class SceneImpl extends EventTargetImpl implements Scene {
      * 管理対象のentityを追加する
      */
     addEntity(entity: Entity): void {
-        if (entity && entity.enableCorrect) {
+        if (entity != null && entity.enableCorrect) {
             entity.scene = this;
             this._correctedEntities.push(entity);
         } else if (entity) {
-            this._noncorrectedEntities.push(entity);
+            this._nonCorrectedEntities.push(entity);
         }
     }
 
@@ -109,7 +115,7 @@ export class SceneImpl extends EventTargetImpl implements Scene {
             util.remove(this._correctedEntities, entity);
             entity.listener.fire(EventConstants.REMOVE, null);
         } else {
-            util.remove(this._noncorrectedEntities, entity);
+            util.remove(this._nonCorrectedEntities, entity);
             entity.listener.fire(EventConstants.REMOVE, null);
         }
     }
@@ -118,7 +124,15 @@ export class SceneImpl extends EventTargetImpl implements Scene {
     render(context: animation.Context): void {
         context.clear();
         this._correctedEntities.forEach(elem => elem.render(context));
-        this._noncorrectedEntities.forEach(elem => elem.render(context));
+        this._nonCorrectedEntities.forEach(elem => elem.render(context));
+    }
+
+    // 指定されたcontextに対してレンダリングを行う
+    render(context: animation.Context): void {
+        this.fire(EventConstants.ENTER_FRAME, null);
+
+        // TODO タイムラインは、animation.Animaクラスが全て担当するため、
+        // そっちも実装する。
     }
 }
 
@@ -233,7 +247,7 @@ export module BaseClasses {
             if (distance === -1) {
                 // distanceが設定されない場合、互いのwidth/heightの平均値が利用される
                 distance = (one.width + other.width + one.height + other.height) / 4;
-            }
+             }
 
             // Entityのx/y座標は、すべて矩形の左上座標を表すため、一度それぞれの中心座標を計算する。
             var vec = animation.Common.Vector;
@@ -308,11 +322,16 @@ export class Game {
         elem.addEventListener("touchstart", (e: MouseEvent) => {
             this.currentScene.fire(EventConstants.TOUCH_START, e);
         });
+
         elem.addEventListener("mousedown", (e: MouseEvent) => {
             this.currentScene.fire(EventConstants.TOUCH_START, e);
         });
 
         elem.addEventListener("mouseup", (e: MouseEvent) => {
+            this.currentScene.fire(EventConstants.TOUCH_END, e);
+        });
+
+        elem.addEventListener("touchend", (e:MouseEvent) => {
             this.currentScene.fire(EventConstants.TOUCH_END, e);
         });
 
@@ -336,7 +355,7 @@ export class Game {
         }
 
         this._intervalHandle = window.setInterval(() => {
-            this.currentScene.fire(EventConstants.ENTER_FRAME, null);
+            this.currentScene.doFrame();
 
             this.render();
 
@@ -407,7 +426,7 @@ export module Physics {
 
         // 指定したtargetを持つadapterを削除する。
         remove(target: BodyBinder): void {
-            if (target !== null) {
+            if (target != null) {
                 util.remove(this._binders, target);
                 this.removeBody(target.body);
             }

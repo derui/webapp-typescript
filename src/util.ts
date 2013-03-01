@@ -82,6 +82,7 @@ export module Illiegals {
 
     // JavaScript側の機能を利用して、クラスに動的にsetterとgetterを生成する。
     // Mixinが出来たら不要になる可能性がある。
+    // getter/setterを作成する側に同名のプロパティが存在する必要は無い。
     // @param src any setter/getterを生成するオブジェクト
     // @param dst any setter/getterから値を取得/設定するオブジェクト
     export function propBind(mappings: PropertyMapping[], src: any, dst: any): void {
@@ -90,13 +91,20 @@ export module Illiegals {
         }
 
         mappings.forEach((mapping) => {
-            if (src[mapping.name] && dst[mapping.name]) {
-                if (mapping.noGetterBind) {
-                    src[mapping.name] = function () { return dst[mapping.name]; }
+            if (dst[mapping.name] !== undefined) {
+
+                if (!mapping.noGetterBind) {
+                    Object.defineProperty(
+                        src, mapping.name,
+                        { get: () => { return dst[mapping.name]; }}
+                    );
                 }
 
-                if (mapping.noSetterBind) {
-                    src[mapping.name] = function (e) { dst[mapping.name] = e; }
+                if (!mapping.noSetterBind) {
+                    Object.defineProperty(
+                        src, mapping.name,
+                        { set: (val) => { dst[mapping.name] = val; }}
+                    );
                 }
             }
         });

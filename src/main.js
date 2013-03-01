@@ -1,4 +1,4 @@
-﻿define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
+define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
     /// <reference path='../lib/jquery.d.ts' />
     /// <reference path='../lib/Box2dWeb.d.ts' />
     var GL = __GL__;
@@ -10,6 +10,12 @@
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     var game = new GL.Game(240, 320);
     game.fps = 60;
+    function isContainPosition(x, y, elem) {
+        var vec = animation.Common.Vector;
+        var center = new vec.Vector2D(elem.x + elem.width / 2, elem.y + elem.height / 2);
+        var touched = new vec.Vector2D(x, y);
+        return center.sub(touched).norm() < elem.width / 2;
+    }
     game.onload = function (g) {
         var b2Vec2 = Box2D.Common.Math.b2Vec2;
         var showCase = new Firework.GameObj.StarCase(game.width, game.height);
@@ -37,37 +43,44 @@
             if(++count == game.fps) {
                 count = 0;
                 var star = new Firework.GameObj.Star();
-                var body = new GL.Physics.BodyBinder(star, star.createFixture(world.worldScale));
                 star.color = rc();
                 star.x = 100;
                 star.y = 0;
+                var body = new GL.Physics.BodyBinder(star, star.createFixture(world.worldScale));
                 star.listener.on(GL.EventConstants.TOUCH_START, star.makeTouchStartHandler(game.currentScene));
                 star.listener.on(GL.EventConstants.TOUCH_END, star.makeTouchEndHandler(game.currentScene));
                 star.listener.on(GL.EventConstants.REMOVE, function (e) {
-                    // entity‚ªíœ‚³‚ê‚½‚çAŠÖ˜A‚·‚ébody‚àíœ‚·‚éB
+                    // entity���폜���ꂽ���A�֘A����body���폜�����B
                     world.remove(body);
                 });
                 game.currentScene.addEntity(star);
                 world.add(body);
                 star_count++;
             }
-            // •¨—¢ŠE‚ðXV‚·‚éB
+            // �������E���X�V�����B
             world.step(1 / game.fps, 3, 3);
         });
         game.currentScene.on(GL.EventConstants.TOUCH_END, function (event) {
             var entities = game.currentScene.entities;
-            var vec = animation.Common.Vector;
-            // ƒNƒŠƒbƒN‚µ‚½À•W‚É¯‚ª‘¶Ý‚·‚é‚©‚Ç‚¤‚©‚ð’²‚×‚éB
+            // �N���b�N�������W�ɐ������݂��邩�ǂ����𒲂ׂ��B
             entities = entities.filter(function (elem) {
-                var center = new vec.Vector2D(elem.x + elem.width / 2, elem.y + elem.height / 2);
-                var touched = new vec.Vector2D(event.clientX, event.clientY);
-                center.sub(touched).norm() < elem.width / 2;
+                return isContainPosition(event.clientX, event.clientY, elem);
             });
             entities.forEach(function (elem) {
                 elem.listener.fire(GL.EventConstants.TOUCH_END, event);
             });
         });
-        // 10ƒtƒŒ[ƒ€–ˆ‚É¯‚ð¶¬‚·‚éB
+        game.currentScene.on(GL.EventConstants.TOUCH_START, function (event) {
+            var entities = game.currentScene.entities;
+            // �N���b�N�������W�ɐ������݂��邩�ǂ����𒲂ׂ��B
+            entities = entities.filter(function (elem) {
+                return isContainPosition(event.clientX, event.clientY, elem);
+            });
+            entities.forEach(function (elem) {
+                elem.listener.fire(GL.EventConstants.TOUCH_START, event);
+            });
+        });
+        // 10�t���[�����ɐ��𐶐������B
         // game.rootScene.tl.then(() => {
         //     var star = new GL.Firework.Star(16, 16);
         //     star.setColor(rc());
@@ -81,7 +94,7 @@
             var x = e.accelerationIncludingGravity.x;
             var y = e.accelerationIncludingGravity.y;
             var z = e.accelerationIncludingGravity.z;
-            // xy‚ÌŒX‚«‚ðŽg‚¤
+            // xy�̌X�����g��
             var gravity = {
                 x: 0,
                 y: 0,
@@ -94,4 +107,3 @@
     };
     game.start();
 })
-//@ sourceMappingURL=main.js.map

@@ -95,6 +95,11 @@ export interface Renderable {
     render(context: Context): void;
 }
 
+// Renderableインターフェースを実装した、何も行わないクラス
+export class NullRenderable implements Renderable {
+    render(context: Context) {}
+}
+
 // 描画可能なオブジェクトのインターフェース
 export interface Symbolize extends Renderable {
     // 図形における基準となる2D座標。
@@ -140,7 +145,7 @@ export class Symbol implements Symbolize {
 }
 
 // レンダリングターゲットに対して、各種のアニメーションを管理するための
-// singletonなクラス
+// singletonなクラス。
 // アニメーションを実行したいオブジェクトは、Animaから生成されるアニメーションオブジェクト
 // を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
 // 一極管理することができる。
@@ -148,12 +153,16 @@ export class Anima {
 
     static private _instance: Anima = null;
 
-    private static getInstance(): Anima {
+    private constructor() {}
+
+    public static getInstance(): Anima {
         if (this._instance == null) {
             this._instance = new Anima();
         }
         return this._instance;
     }
+
+
 }
 
 // 描画オブジェクトの描画先となるコンテキストクラス
@@ -192,8 +201,9 @@ export class InvalidCanvasException {
     }
 }
 
-// CanvasGradientをラッピングしたクラスを提供するモジュール
-export module Gradietion {
+// Canvas.fillStyleに対する設定を行うためのクラス群
+// CanvasGradientをラッピングしたクラスなどを提供する
+export module Gradation {
 
     // グラディエーションクラスのインターフェース
     export interface Gradient {
@@ -344,7 +354,7 @@ module Util {
 export module Renderer {
 
     export class BaseData {
-        gradient: Gradietion.Gradient = new Gradietion.NullGradient();
+        gradient: Gradation.Gradient = new Gradation.NullGradient();
         color: Common.Color = new Common.Color();
         x: number = 0;
         y: number = 0;
@@ -362,6 +372,8 @@ export module Renderer {
         export class Data extends BaseData {
             constructor(public x: number, public y: number, public radius: number) {
                 super();
+                this.height = radius * 2;
+                this.width = radius * 2;
             }
         }
 
@@ -395,7 +407,8 @@ export module Renderer {
 
         // 矩形をレンダリングする際のデータ
         export class Data extends BaseData {
-            constructor(public x: number, public y: number, public width: number, height:number) {
+            constructor(public x: number, public y: number,
+                        public width: number, public height: number) {
                 super();
             }
         }
@@ -411,8 +424,10 @@ export module Renderer {
 
                     var ctx = context.context;
                     // グラディエーションが設定可能である場合は設定する
-                    if (this.data.gradient) {
+                    if (!(this.data.gradient instanceof Gradation.NullGradient)) {
                         ctx.fillStyle = this.data.gradient.raw();
+                    } else {
+                        ctx.fillStyle = this.data.color.toFillStyle();
                     }
 
                     if (this.isFill) {
