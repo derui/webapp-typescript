@@ -3,7 +3,11 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports"], function(require, exports) {
+define(["require", "exports", "timeline", "util"], function(require, exports, __tl__, __util__) {
+    var tl = __tl__;
+
+    var util = __util__;
+
     // canvas element only.
     (function (Common) {
         var Color = (function () {
@@ -17,6 +21,12 @@ define(["require", "exports"], function(require, exports) {
                 this.b = b;
                 this.a = a;
             }
+            Color.prototype.copy = function (col) {
+                this.r = col.r;
+                this.g = col.g;
+                this.b = col.b;
+                this.a = col.a;
+            };
             Color.prototype.toFillStyle = function () {
                 var colors = [
                     this.r.toString(), 
@@ -25,6 +35,62 @@ define(["require", "exports"], function(require, exports) {
                     this.a.toString()
                 ].join(',');
                 return "rgba(" + colors + ")";
+            };
+            Color.hsvToRgb = // hsv形式から、rgb形式へ変換する
+            function hsvToRgb(h, s, v) {
+                var r, g, b;
+                var i;
+                var f, p, q, t;
+                h = Math.max(0, Math.min(360, h));
+                s = Math.max(0, Math.min(100, s));
+                v = Math.max(0, Math.min(100, v));
+                s /= 100;
+                v /= 100;
+                if(s == 0) {
+                    r = g = b = v;
+                    return new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+                }
+                h /= 60// sector 0 to 5
+                ;
+                i = Math.floor(h);
+                f = h - i// factorial part of h
+                ;
+                p = v * (1 - s);
+                q = v * (1 - s * f);
+                t = v * (1 - s * (1 - f));
+                switch(i) {
+                    case 0:
+                        r = v;
+                        g = t;
+                        b = p;
+                        break;
+                    case 1:
+                        r = q;
+                        g = v;
+                        b = p;
+                        break;
+                    case 2:
+                        r = p;
+                        g = v;
+                        b = t;
+                        break;
+                    case 3:
+                        r = p;
+                        g = q;
+                        b = v;
+                        break;
+                    case 4:
+                        r = t;
+                        g = p;
+                        b = v;
+                        break;
+                    default:
+                        r = v;
+                        g = p;
+                        b = q;
+                        break;
+                }
+                return new Color(r, g, b);
             };
             return Color;
         })();
@@ -160,23 +226,51 @@ define(["require", "exports"], function(require, exports) {
         return Symbol;
     })();
     exports.Symbol = Symbol;    
+    var AnimaImpl = (function () {
+        function AnimaImpl() {
+            // 登録されたsymbolと、割り付けられたtimelineを保存する。
+            // ここに保存されたtimelineは、tickが呼び出されるたびに、Timeline.tickが
+            // 呼び出されるようになる。
+            this._timelines = [];
+        }
+        AnimaImpl.prototype.add = // symbolを処理対象として登録し、アニメーション操作用のTimelineを返却する。
+        function (symbol) {
+            var result = tl.TimelineFactory.create(symbol);
+            this._timelines.push({
+                symbol: symbol,
+                timeline: result
+            });
+            return result;
+        };
+        AnimaImpl.prototype.getTimeline = // 渡されたsymbolに等しいsymbolに関連付けられたtimelineを返す。
+        function (symbol) {
+            var equals = this._timelines.filter(function (elem) {
+                return elem.symbol === symbol;
+            });
+            if(equals.length > 0) {
+                return equals[0].timeline;
+            }
+            return null;
+        };
+        AnimaImpl.prototype.remove = // 渡されたsymbolを削除する。
+        function (symbol) {
+            util.removeWith(this._timelines, function (obj) {
+                return obj.symbol === symbol;
+            });
+        };
+        AnimaImpl.prototype.tickFrame = function () {
+            this._timelines.forEach(function (elem) {
+                elem.timeline.tick();
+            });
+        };
+        return AnimaImpl;
+    })();    
     // レンダリングターゲットに対して、各種のアニメーションを管理するための
-    // singletonなクラス
-    // アニメーションを実行したいオブジェクトは、Animaから生成されるアニメーションオブジェクト
+    // singletonオブジェクト
+    // アニメーションや、時間ベースでの処理を実行したいオブジェクトは、Animaから生成されるTimelineオブジェクト
     // を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
     // 一極管理することができる。
-    var Anima = (function () {
-        function Anima() { }
-        Anima._instance = null;
-        Anima.getInstance = function getInstance() {
-            if(this._instance == null) {
-                this._instance = new Anima();
-            }
-            return this._instance;
-        };
-        return Anima;
-    })();
-    exports.Anima = Anima;    
+    exports.Anima = new AnimaImpl();
     // 描画オブジェクトの描画先となるコンテキストクラス
     var Context = (function () {
         function Context(canvas) {

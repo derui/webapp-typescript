@@ -4,13 +4,22 @@ define(["require", "exports"], function(require, exports) {
     }
     function remove(x, o) {
         var len = x.length;
-        for(var i = len; i >= 0; --i) {
+        for(var i = len - 1; i >= 0; --i) {
             if(x[i] === o) {
                 x.splice(i, 1);
             }
         }
     }
     exports.remove = remove;
+    function removeWith(x, f) {
+        var len = x.length;
+        for(var i = len - 1; i >= 0; --i) {
+            if(f(x[i])) {
+                x.splice(i, 1);
+            }
+        }
+    }
+    exports.removeWith = removeWith;
     var String = (function () {
         function String() { }
         String.zeroPadding = // zero padding.

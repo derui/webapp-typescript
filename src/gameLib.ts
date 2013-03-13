@@ -2,6 +2,7 @@
 
 import util = module("util");
 import animation = module("animation");
+import timeline = module("timeline");
 
 export class EventConstants {
     /** タッチ/クリックされた際に発行されるイベント */
@@ -103,7 +104,14 @@ export class SceneImpl extends EventTargetImpl implements Scene {
             entity.scene = this;
             this._correctedEntities.push(entity);
         } else if (entity) {
+            entity.scene = this;
             this._nonCorrectedEntities.push(entity);
+        }
+
+        // タイムラインに登録する
+        if (entity != null) {
+            this._correctedEntities.push(entity);
+            entity.tl = animation.Anima.add(entity);;
         }
     }
 
@@ -118,21 +126,29 @@ export class SceneImpl extends EventTargetImpl implements Scene {
             util.remove(this._nonCorrectedEntities, entity);
             entity.listener.fire(EventConstants.REMOVE, null);
         }
+
+        // アニメーションタイムラインから削除する
+        if (entity !== null) {
+            animation.Anima.remove(entity);
+        }
     }
 
     // 指定されたcontextに対してレンダリングを行う
     render(context: animation.Context): void {
         context.clear();
+        context.context.fillStyle = "rgba(0,0,0,1)";
+        context.context.fillRect(0, 0, context.width, context.height);
         this._correctedEntities.forEach(elem => elem.render(context));
         this._nonCorrectedEntities.forEach(elem => elem.render(context));
     }
 
     // 指定されたcontextに対してレンダリングを行う
-    render(context: animation.Context): void {
+    doFrame(): void {
         this.fire(EventConstants.ENTER_FRAME, null);
 
-        // TODO タイムラインは、animation.Animaクラスが全て担当するため、
-        // そっちも実装する。
+        // タイムライン自体は、それぞれ独立しているため、Animaによる
+        // tickを行う
+        animation.Anima.tickFrame();
     }
 }
 
@@ -154,58 +170,12 @@ export interface Entity extends animation.Symbolize {
     // Sceneに追加されたとき、sceneのentitiesとして返却されるかどうか。
     // falseだと追加されずに、renderの対象としてのみ動作する。
     enableCorrect: bool;
+
+    // それぞれに割り当てられたタイムラインオブジェクト。
+    tl:timeline.Timeline;
 }
 
 export module BaseClasses {
-
-    // 渡されたSymbolオブジェクトを、Entityとして扱うためのプロキシクラス。
-    export class EntityProxy implements Entity {
-        private _symbol: animation.Symbolize;
-        enableCorrect: bool = true;
-
-        // 各プロパティに対するgetter
-        get x(): number { return this._symbol.x; }
-        get y(): number { return this._symbol.y; }
-        get width(): number { return this._symbol.width; }
-        get height(): number { return this._symbol.height; }
-        get zIndex(): number { return this._symbol.zIndex; }
-        get visible(): bool { return this._symbol.visible; }
-
-        // 各プロパティに対するsetter
-        set x(_x: number) { this._symbol.x = _x; }
-        set y(_y: number) { this._symbol.y = _y; }
-        set width(_width: number) { this._symbol.width = _width; }
-        set height(_height: number) { this._symbol.height = _height; }
-        set zIndex(_z: number) { this._symbol.zIndex = _z; }
-        set visible(v: bool) { this._symbol.visible = v; }
-        scene: Scene = null;
-        listener: EventTarget;
-
-        constructor(symbol: animation.Symbolize) {
-            this._symbol = symbol;
-            this.listener = new EventTargetImpl();
-        }
-
-        moveBy(x: number, y: number) {
-            this._symbol.moveBy(x, y);
-        }
-
-        moveTo(x: number, y: number) {
-            this._symbol.moveTo(x, y);
-        }
-
-        render(context: animation.Context): void {
-            this._symbol.render(context);
-        }
-
-        intersect(other: Entity): bool {
-            return Intersector.intersect(this, other);
-        }
-
-        within(other: Entity, distance? = -1): bool {
-            return Intersector.within(this, other, distance);
-        }
-    }
 
     // Entity同士の衝突判定処理をまとめて提供するクラス。このクラス自体に影響するような
     // 処理は存在しない
@@ -264,6 +234,7 @@ export module BaseClasses {
         enableCorrect: bool = true;
         scene: Scene = null;
         listener: EventTarget = new EventTargetImpl();
+        tl : timeline.Timeline;
 
         constructor() {
             super();

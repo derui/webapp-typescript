@@ -5,8 +5,17 @@ function isNum(x:Object) : bool {
 
 export function remove(x:any[], o:any) : void {
     var len = x.length;
-    for (var i = len; i >= 0; --i) {
+    for (var i = len - 1; i >= 0; --i) {
         if (x[i] === o) {
+            x.splice(i, 1);
+        }
+    }
+}
+
+export function removeWith(x:any[], f:(any) => bool) : void {
+    var len = x.length;
+    for (var i = len - 1; i >= 0; --i) {
+        if (f(x[i])) {
             x.splice(i, 1);
         }
     }

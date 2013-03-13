@@ -4,6 +4,7 @@ import animation = module("animation");
 import gl = module("gameLib");
 import fw = module("firework");
 import I = util.Illiegals
+import starmine = module("starmine");
 
 // Starで利用されている各種情報
 module StarUtil {
@@ -140,6 +141,15 @@ class StarLogic {
 
         // 準備段階は終了とする
         this.state.objectState = fw.ObjectState.PrepareLaunch;
+
+        this.starShape.tl.delay(5).then(() => {
+            var mine = new starmine.StarMineImpl(this.starShape.x, this.starShape.y);
+            mine.enableCorrect = false;
+            this.starShape.scene.addEntity(mine);
+            mine.setup();
+
+            this.starShape.scene.removeEntity(this.starShape);
+        });
         return true;
     }
 
@@ -247,7 +257,7 @@ module Renderer {
                 state : fw.ObjectState.Connected, render : new ConnectedStarRenderer(data)
             });
             this._renderStock.push({
-                state : fw.ObjectState.PrepareLaunch, render : new PrepareLaunchRenderer(Data)
+                state : fw.ObjectState.PrepareLaunch, render : new PrepareLaunchRenderer(data)
             });
         }
 

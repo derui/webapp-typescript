@@ -9,6 +9,7 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
 
     var animation = __animation__;
 
+    
     var EventConstants = (function () {
         function EventConstants() { }
         EventConstants.TOUCH_START = "ontouchstart";
@@ -65,7 +66,14 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
                 entity.scene = this;
                 this._correctedEntities.push(entity);
             } else if(entity) {
+                entity.scene = this;
                 this._nonCorrectedEntities.push(entity);
+            }
+            // タイムラインに登録する
+            if(entity != null) {
+                this._correctedEntities.push(entity);
+                entity.tl = animation.Anima.add(entity);
+                ;
             }
         };
         SceneImpl.prototype.removeEntity = /**
@@ -79,10 +87,16 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
                 util.remove(this._nonCorrectedEntities, entity);
                 entity.listener.fire(EventConstants.REMOVE, null);
             }
+            // アニメーションタイムラインから削除する
+            if(entity !== null) {
+                animation.Anima.remove(entity);
+            }
         };
         SceneImpl.prototype.render = // 指定されたcontextに対してレンダリングを行う
         function (context) {
             context.clear();
+            context.context.fillStyle = "rgba(0,0,0,1)";
+            context.context.fillRect(0, 0, context.width, context.height);
             this._correctedEntities.forEach(function (elem) {
                 return elem.render(context);
             });
@@ -90,99 +104,17 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
                 return elem.render(context);
             });
         };
+        SceneImpl.prototype.doFrame = // 指定されたcontextに対してレンダリングを行う
+        function () {
+            this.fire(EventConstants.ENTER_FRAME, null);
+            // タイムライン自体は、それぞれ独立しているため、Animaによる
+            // tickを行う
+            animation.Anima.tickFrame();
+        };
         return SceneImpl;
     })(EventTargetImpl);
     exports.SceneImpl = SceneImpl;    
     (function (BaseClasses) {
-        // 渡されたSymbolオブジェクトを、Entityとして扱うためのプロキシクラス。
-        var EntityProxy = (function () {
-            function EntityProxy(symbol) {
-                this.enableCorrect = true;
-                this.scene = null;
-                this._symbol = symbol;
-                this.listener = new EventTargetImpl();
-            }
-            Object.defineProperty(EntityProxy.prototype, "x", {
-                get: // 各プロパティに対するgetter
-                function () {
-                    return this._symbol.x;
-                },
-                set: // 各プロパティに対するsetter
-                function (_x) {
-                    this._symbol.x = _x;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(EntityProxy.prototype, "y", {
-                get: function () {
-                    return this._symbol.y;
-                },
-                set: function (_y) {
-                    this._symbol.y = _y;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(EntityProxy.prototype, "width", {
-                get: function () {
-                    return this._symbol.width;
-                },
-                set: function (_width) {
-                    this._symbol.width = _width;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(EntityProxy.prototype, "height", {
-                get: function () {
-                    return this._symbol.height;
-                },
-                set: function (_height) {
-                    this._symbol.height = _height;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(EntityProxy.prototype, "zIndex", {
-                get: function () {
-                    return this._symbol.zIndex;
-                },
-                set: function (_z) {
-                    this._symbol.zIndex = _z;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(EntityProxy.prototype, "visible", {
-                get: function () {
-                    return this._symbol.visible;
-                },
-                set: function (v) {
-                    this._symbol.visible = v;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            EntityProxy.prototype.moveBy = function (x, y) {
-                this._symbol.moveBy(x, y);
-            };
-            EntityProxy.prototype.moveTo = function (x, y) {
-                this._symbol.moveTo(x, y);
-            };
-            EntityProxy.prototype.render = function (context) {
-                this._symbol.render(context);
-            };
-            EntityProxy.prototype.intersect = function (other) {
-                return Intersector.intersect(this, other);
-            };
-            EntityProxy.prototype.within = function (other, distance) {
-                if (typeof distance === "undefined") { distance = -1; }
-                return Intersector.within(this, other, distance);
-            };
-            return EntityProxy;
-        })();
-        BaseClasses.EntityProxy = EntityProxy;        
         // Entity同士の衝突判定処理をまとめて提供するクラス。このクラス自体に影響するような
         // 処理は存在しない
         (function (Intersector) {
@@ -325,7 +257,7 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
                 this.onload(this);
             }
             this._intervalHandle = window.setInterval(function () {
-                _this.currentScene.fire(EventConstants.ENTER_FRAME, null);
+                _this.currentScene.doFrame();
                 _this.render();
             }, 1000 / this._fps);
             this._isGameStarted = true;

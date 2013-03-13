@@ -61,6 +61,10 @@
     <TypeScriptSourceMap>false</TypeScriptSourceMap>
   </PropertyGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="src\action.ts" />
+    <Content Include="src\file1.js">
+      <DependentUpon>action.ts</DependentUpon>
+    </Content>
     <Content Include="index.html" />
     <Content Include="js\Box2dWeb-2.1.a.3.js" />
     <Content Include="js\Box2dWeb-2.1.a.3.min.js" />
@@ -70,6 +74,7 @@
     <Content Include="lib\Box2dWeb.d.ts" />
     <Content Include="lib\enchant.d.ts" />
     <Content Include="lib\jquery.d.ts" />
+    <TypeScriptCompile Include="src\star.ts" />
     <TypeScriptCompile Include="src\timeline.ts" />
     <TypeScriptCompile Include="src\animation.ts" />
     <TypeScriptCompile Include="src\main.ts" />

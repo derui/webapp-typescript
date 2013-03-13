@@ -3,7 +3,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "util", "animation", "gameLib", "firework"], function(require, exports, __util__, __animation__, __gl__, __fw__) {
+define(["require", "exports", "util", "animation", "gameLib", "firework", "starmine"], function(require, exports, __util__, __animation__, __gl__, __fw__, __starmine__) {
     var util = __util__;
 
     var animation = __animation__;
@@ -13,6 +13,8 @@ define(["require", "exports", "util", "animation", "gameLib", "firework"], funct
     var fw = __fw__;
 
     var I = util.Illiegals;
+    var starmine = __starmine__;
+
     // Starで利用されている各種情報
     var StarUtil;
     (function (StarUtil) {
@@ -156,6 +158,13 @@ define(["require", "exports", "util", "animation", "gameLib", "firework"], funct
             s.body.CreateFixture(fixDef);
             // 準備段階は終了とする
             this.state.objectState = fw.ObjectState.PrepareLaunch;
+            this.starShape.tl.delay(5).then(function () {
+                var mine = new starmine.StarMineImpl(_this.starShape.x, _this.starShape.y);
+                mine.enableCorrect = false;
+                _this.starShape.scene.addEntity(mine);
+                mine.setup();
+                _this.starShape.scene.removeEntity(_this.starShape);
+            });
             return true;
         };
         StarLogic.prototype.createFixture = // 渡されたstarに適合するbodyの設定を作成する。

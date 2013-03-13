@@ -63,6 +63,9 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
             function Wall(width, height) {
                         _super.call(this);
                 this._data = new animation.Renderer.Box.Data(0, 0, width, height);
+                this._data.color.r = 255;
+                this._data.color.g = 255;
+                this._data.color.b = 255;
                 this._renderer = new animation.Renderer.Box.BoxRenderer(this._data);
                 // �o�C���h���Ă���
                 I.propBind([

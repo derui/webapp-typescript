@@ -1,14 +1,73 @@
 
+import tl = module("timeline");
+import util = module("util");
+
 // canvas element only.
 export module Common {
 
     export class Color {
         constructor(public r = 0, public g = 0, public b = 0, public a = 1.0) { }
 
+        copy(col:Color) {
+            this.r = col.r;
+            this.g = col.g;
+            this.b = col.b;
+            this.a = col.a;
+        }
+
         toFillStyle(): string {
             var colors = [this.r.toString(), this.g.toString(), this.b.toString(), this.a.toString()].join(',');
             return "rgba(" + colors + ")";
         }
+
+        // hsv形式から、rgb形式へ変換する
+        static hsvToRgb(h:number, s:number, v:number) : Color {
+            var r, g, b;
+            var i;
+            var f, p, q, t;
+            
+            h = Math.max(0, Math.min(360, h));
+            s = Math.max(0, Math.min(100, s));
+            v = Math.max(0, Math.min(100, v));
+
+            s /= 100;
+            v /= 100;
+            
+            if(s == 0) {
+                r = g = b = v;
+                return new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+            }
+            
+            h /= 60; // sector 0 to 5
+            i = Math.floor(h);
+            f = h - i; // factorial part of h
+            p = v * (1 - s);
+            q = v * (1 - s * f);
+            t = v * (1 - s * (1 - f));
+            
+            switch(i) {
+            case 0:
+                r = v;g = t;b = p;
+                break;
+            case 1:
+                r = q;g = v;b = p;
+                break;
+            case 2:
+                r = p;g = v;b = t;
+                break;
+            case 3:
+                r = p;g = q;b = v;
+                break;
+            case 4:
+                r = t;g = p;b = v;
+                break;
+            default:
+                r = v;g = p;b = q;
+                break;
+            }
+            return new Color(r, g, b);
+        }
+
     }
 
     export class Rect {
@@ -26,7 +85,7 @@ export module Common {
             var width = this.right - this.left,
             height = this.bottom - this.top;
             return new Vector.Vector2D(this.left + width / 2,
-                                     this.top + height / 2);
+                                       this.top + height / 2);
         }
 
         set (left: number, top: number, right: number, bottom: number) {
@@ -144,26 +203,73 @@ export class Symbol implements Symbolize {
     }
 }
 
-// レンダリングターゲットに対して、各種のアニメーションを管理するための
-// singletonなクラス。
-// アニメーションを実行したいオブジェクトは、Animaから生成されるアニメーションオブジェクト
-// を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
-// 一極管理することができる。
-export class Anima {
+// Animaのインターフェース。
+export interface Anima {
 
-    static private _instance: Anima = null;
+    // symbolをAnimaに登録する。登録されたsymbolに対して、一つのTimelineが
+    // 割り付けられて登録される。
+    // 返却されたTimelineは、同時にAnimaに登録されるため、Timelineから設定された
+    // アニメーションは、自動的にAnimaの処理時に進められる。
+    add(symbol: Symbolize): tl.Timeline;
 
-    private constructor() {}
+    // 登録されているsymbolに割り当てられているtimelineを取得する。
+    getTimeline(symbol: Symbolize): tl.Timeline;
 
-    public static getInstance(): Anima {
-        if (this._instance == null) {
-            this._instance = new Anima();
-        }
-        return this._instance;
+    // Symbolを削除する。Timelineも同時に削除するため、削除後は何も行われない。
+    remove(symbol: Symbolize): void;
+
+    // フレームを一つ進める。
+    tickFrame() : void;
+}
+
+class AnimaImpl implements Anima {
+
+    // 登録されたsymbolと、割り付けられたtimelineを保存する。
+    // ここに保存されたtimelineは、tickが呼び出されるたびに、Timeline.tickが
+    // 呼び出されるようになる。
+    private _timelines: { symbol: Symbolize; timeline: tl.Timeline; }[] = [];
+
+    constructor() { }
+
+    // symbolを処理対象として登録し、アニメーション操作用のTimelineを返却する。
+    add(symbol: Symbolize): tl.Timeline {
+        var result =tl.TimelineFactory.create(symbol);
+        this._timelines.push({symbol : symbol,
+                              timeline: result});
+        return result;
     }
 
+    // 渡されたsymbolに等しいsymbolに関連付けられたtimelineを返す。
+    getTimeline(symbol: Symbolize): tl.Timeline {
+        var equals = this._timelines.filter((elem) => {
+            return elem.symbol === symbol
+        });
 
+        if (equals.length > 0) {
+            return equals[0].timeline;
+        }
+        return null;
+    }
+
+    // 渡されたsymbolを削除する。
+    remove(symbol: Symbolize): void  {
+        util.removeWith(this._timelines, (obj : {symbol:Symbolize;}) => {
+            return obj.symbol === symbol});
+    }
+
+    tickFrame() : void {
+        this._timelines.forEach((elem) => {
+            elem.timeline.tick();
+        });
+    }
 }
+
+// レンダリングターゲットに対して、各種のアニメーションを管理するための
+// singletonオブジェクト
+// アニメーションや、時間ベースでの処理を実行したいオブジェクトは、Animaから生成されるTimelineオブジェクト
+// を取得し、各フレームごとにAnimaの更新処理を行うことで、全体のアニメーションを、時間ベースで
+// 一極管理することができる。
+export var Anima : Anima = new AnimaImpl();
 
 // 描画オブジェクトの描画先となるコンテキストクラス
 export class Context {

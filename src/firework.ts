@@ -55,6 +55,10 @@ export module GameObj {
         constructor(width: number, height: number) {
             super();
             this._data = new animation.Renderer.Box.Data(0, 0, width, height);
+            this._data.color.r = 255;
+            this._data.color.g = 255;
+            this._data.color.b = 255;
+
             this._renderer = new animation.Renderer.Box.BoxRenderer(this._data);
 
             // ƒoƒCƒ“ƒh‚µ‚Ä‚¨‚­
