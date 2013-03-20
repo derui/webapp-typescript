@@ -65,7 +65,38 @@ export module Common {
                 r = v;g = p;b = q;
                 break;
             }
-            return new Color(r, g, b);
+            return new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+        }
+
+        // RGB形式から、hsv形式に変換する
+        static rgbToHsv(color: Color) : {h:number;s:number;v:number;} {
+            var r = color.r, g = color.g, b = color.b;
+            var h, s, v;
+            
+            if (Math.max(r, g) === r) {
+                if (Math.max(r, b) === r) {
+                    h = 60 * (g - b) / (r - Math.min(g, b)) + 0;
+                    s = (r - Math.min(g, b)) / r;
+                    v = r;
+                } else {
+                    h = 60 * (r - b) / (b - Math.min(g, r)) + 240;
+                    s = (b - Math.min(g, r)) / b;
+                    v = b;
+                }
+            } else {
+                if (Math.max(g, b) === g) {
+                    h = 60 * (b - r) / (g - Math.min(r, b)) + 120;
+                    s = (g - Math.min(b, r)) / g;
+                    v = g;
+                } else {
+                    h = 60 * (r - b) / (b - Math.min(g, r)) + 240;
+                    s = (b - Math.min(g, r)) / b;
+                    v = b;
+                }
+            }
+
+            h = h % 360;
+            return {h:h, v:v, s:s};
         }
 
     }
@@ -74,7 +105,7 @@ export module Common {
 
         get center(): Vector.Vector2D { return this.calcCenter(); }
         get width(): number { return this.left - this.right; }
-        get height(): number { return this.bottom - this.top; }
+         get height(): number { return this.bottom - this.top; }
 
         constructor(public left: number, public top: number,
                     public right: number, public bottom: number) {
@@ -545,6 +576,5 @@ export module Renderer {
             }
         }
     }
-
-
 }
+

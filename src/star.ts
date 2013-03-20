@@ -143,7 +143,8 @@ class StarLogic {
         this.state.objectState = fw.ObjectState.PrepareLaunch;
 
         this.starShape.tl.delay(5).then(() => {
-            var mine = new starmine.StarMineImpl(this.starShape.x, this.starShape.y);
+            var mine = new starmine.StarMineImpl(this.starShape.x, this.starShape.y,
+                                                this.data.color);
             mine.enableCorrect = false;
             this.starShape.scene.addEntity(mine);
             mine.setup();

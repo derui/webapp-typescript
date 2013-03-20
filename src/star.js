@@ -159,7 +159,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
             // 準備段階は終了とする
             this.state.objectState = fw.ObjectState.PrepareLaunch;
             this.starShape.tl.delay(5).then(function () {
-                var mine = new starmine.StarMineImpl(_this.starShape.x, _this.starShape.y);
+                var mine = new starmine.StarMineImpl(_this.starShape.x, _this.starShape.y, _this.data.color);
                 mine.enableCorrect = false;
                 _this.starShape.scene.addEntity(mine);
                 mine.setup();

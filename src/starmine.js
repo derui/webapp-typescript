@@ -12,12 +12,14 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
     var Gravity = 0.098;
     // 火花の色を管理する。
     var ColorEffect = (function () {
-        function ColorEffect() {
+        function ColorEffect(baseColor) {
             // 全体の透明度
             this._alpha = 0.8;
             this._color = new animation.Common.Color();
-            this._hue = Math.random() * 360;
-            this._hueEffect = Math.random() * 60 - 30;
+            var hsv = animation.Common.Color.rgbToHsv(baseColor);
+            this._hue = hsv.h;
+            this._color = animation.Common.Color.hsvToRgb(this._hue, 100, 100);
+            this._hueEffect = Math.floor(Math.random() * 60 - 30);
         }
         ColorEffect.prototype.updateEffect = function (frame) {
             if(frame > 8) {
@@ -25,7 +27,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             }
             // 3フレーム毎に、色相を変化させる
             if(frame % 3 == 0) {
-                this._hue = (this._hue + this._hueEffect + 360) % 360;
+                this._hue = (this._hue + this._hueEffect) % 360;
                 this._color = animation.Common.Color.hsvToRgb(this._hue, 100, 100);
             }
         };
@@ -37,14 +39,16 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             }
         };
         ColorEffect.prototype.getStrokeColor = function () {
-            this._color.a = this._alpha * 0.7;
-            return this._color;
+            var ret = new animation.Common.Color();
+            ret.copy(this._color);
+            ret.a = this._alpha * 0.7;
+            return ret;
         };
         return ColorEffect;
     })();    
     var Spark = (function (_super) {
         __extends(Spark, _super);
-        function Spark(x, y, speed, expire) {
+        function Spark(x, y, speed, expire, effect) {
                 _super.call(this);
             this.x = x;
             this.y = y;
@@ -53,7 +57,6 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             this.tracking = [];
             this.swap = 0;
             this.frame = 0;
-            this._effect = new ColorEffect();
             this.tracking.push({
                 x: x,
                 y: y
@@ -62,6 +65,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 x: x,
                 y: y
             });
+            this._effect = effect;
             // ベクトルを正規化する
             var rnd = Math.random();
             var theta = Math.sqrt(1 - rnd * rnd);
@@ -75,8 +79,6 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         }
         Spark.swappingFrame = 10;
         Spark.prototype.start = function () {
-            // 色相を更新する。
-            this._effect.updateEffect(this.frame);
             this.x += this.vx;
             this.y += this.vy;
             this.vx *= 0.92;
@@ -104,7 +106,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             var c = context.context;
             var last = this.swap ^ 1;
             var pivot = this.swap;
-            c.strokeStyle = this._effect.getStrokeColor();
+            c.strokeStyle = this._effect.getStrokeColor().toFillStyle();
             c.lineWidth = 3;
             c.beginPath();
             c.moveTo(this.tracking[last].x, this.tracking[last].y);
@@ -122,22 +124,26 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
     // 花火のエフェクト全体を提供するためのクラス
     var StarMineImpl = (function (_super) {
         __extends(StarMineImpl, _super);
-        function StarMineImpl(x, y) {
+        function StarMineImpl(x, y, baseColor) {
                 _super.call(this);
             this.x = x;
             this.y = y;
             this._sparks = [];
+            this._colorEffect = new ColorEffect(baseColor);
             for(var i = 0; i < 50; ++i) {
-                this._sparks.push(new Spark(x, y, 5, 300));
+                this._sparks.push(new Spark(x, y, 5, 300, this._colorEffect));
             }
         }
         StarMineImpl.prototype.setup = function () {
             var _this = this;
+            var frame = 0;
             this.tl.repeat(10, function () {
+                _this._colorEffect.updateEffect(++frame);
                 _this._sparks.forEach(function (elem) {
                     elem.start();
                 });
             }).repeat(100, function () {
+                _this._colorEffect.updateEffect(++frame);
                 _this._sparks.forEach(function (elem) {
                     elem.end();
                 });

@@ -23,9 +23,11 @@ class ColorEffect {
 
     private _color : animation.Common.Color = new animation.Common.Color();
 
-    constructor() {
-        this._hue = Math.random() * 360;
-        this._hueEffect = Math.random() * 60 - 30;
+    constructor(baseColor: animation.Common.Color) {
+        var hsv = animation.Common.Color.rgbToHsv(baseColor);
+        this._hue = hsv.h;
+        this._color = animation.Common.Color.hsvToRgb(this._hue, 100, 100);
+        this._hueEffect = Math.floor(Math.random() * 60 - 30);
     }
 
     updateEffect(frame:number) :void {
@@ -35,7 +37,7 @@ class ColorEffect {
 
         // 3フレーム毎に、色相を変化させる
         if (frame % 3 == 0) {
-            this._hue = (this._hue + this._hueEffect + 360) % 360;
+            this._hue = (this._hue + this._hueEffect) % 360;
             this._color = animation.Common.Color.hsvToRgb(this._hue, 100, 100);
         }
     }
@@ -51,8 +53,10 @@ class ColorEffect {
     }
 
     getStrokeColor() : animation.Common.Color {
-        this._color.a = this._alpha * 0.7;
-        return this._color;
+        var ret = new animation.Common.Color;
+        ret.copy(this._color);
+        ret.a = this._alpha * 0.7;
+        return ret;
     }
 }
 
@@ -70,13 +74,14 @@ class Spark extends gl.BaseClasses.EntityImpl {
 
     private static swappingFrame : number = 10;
     private frame : number = 0;
-    private _effect : ColorEffect = new ColorEffect();
+    private _effect : ColorEffect;
 
     constructor(public x:number, public y:number, public speed: number,
-                public expire: number) {
+                public expire: number, effect : ColorEffect) {
         super();
         this.tracking.push({x:x, y:y});
         this.tracking.push({x:x, y:y});
+        this._effect = effect;
 
         // ベクトルを正規化する
         var rnd = Math.random();
@@ -93,9 +98,6 @@ class Spark extends gl.BaseClasses.EntityImpl {
     }
 
     start() : void {
-
-        // 色相を更新する。
-        this._effect.updateEffect(this.frame);
 
         this.x += this.vx;
         this.y += this.vy;
@@ -133,7 +135,7 @@ class Spark extends gl.BaseClasses.EntityImpl {
         var last = this.swap ^ 1;
         var pivot = this.swap;
 
-        c.strokeStyle = this._effect.getStrokeColor();
+        c.strokeStyle = this._effect.getStrokeColor().toFillStyle();
         c.lineWidth = 3;
         c.beginPath();
         c.moveTo(this.tracking[last].x, this.tracking[last].y);
@@ -146,6 +148,7 @@ class Spark extends gl.BaseClasses.EntityImpl {
         c.stroke();
 
         this.data.color = this._effect.getSparkColor();
+
         this.renderer.render(context);
     }
 
@@ -155,17 +158,24 @@ class Spark extends gl.BaseClasses.EntityImpl {
 export class StarMineImpl extends gl.BaseClasses.EntityImpl implements StarMine {
 
     private _sparks : Spark[] = [];
+    private _colorEffect : ColorEffect;
 
-    constructor(public x:number, public y:number) {
+    constructor(public x:number, public y:number, baseColor : animation.Common.Color) {
         super();
+        this._colorEffect = new ColorEffect(baseColor);
         for (var i = 0; i < 50; ++i) {
-            this._sparks.push(new Spark(x, y, 5, 300));
+            this._sparks.push(new Spark(x, y, 5, 300, this._colorEffect));
         }
     }
 
     setup() : void {
-        this.tl.repeat(10, () => {this._sparks.forEach((elem) => {elem.start();})}).
-            repeat(100, () => {this._sparks.forEach((elem) => {elem.end();})});
+        var frame = 0;
+        this.tl.repeat(10, () => {
+            this._colorEffect.updateEffect(++frame);
+            this._sparks.forEach((elem) => {elem.start();})}).
+            repeat(100, () => {
+                this._colorEffect.updateEffect(++frame);
+                this._sparks.forEach((elem) => {elem.end();})});
         this.tl.then(() => {
             this.scene.removeEntity(this);
         });

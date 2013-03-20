@@ -90,7 +90,39 @@ define(["require", "exports", "timeline", "util"], function(require, exports, __
                         b = q;
                         break;
                 }
-                return new Color(r, g, b);
+                return new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+            };
+            Color.rgbToHsv = // RGB形式から、hsv形式に変換する
+            function rgbToHsv(color) {
+                var r = color.r, g = color.g, b = color.b;
+                var h, s, v;
+                if(Math.max(r, g) === r) {
+                    if(Math.max(r, b) === r) {
+                        h = 60 * (g - b) / (r - Math.min(g, b)) + 0;
+                        s = (r - Math.min(g, b)) / r;
+                        v = r;
+                    } else {
+                        h = 60 * (r - b) / (b - Math.min(g, r)) + 240;
+                        s = (b - Math.min(g, r)) / b;
+                        v = b;
+                    }
+                } else {
+                    if(Math.max(g, b) === g) {
+                        h = 60 * (b - r) / (g - Math.min(r, b)) + 120;
+                        s = (g - Math.min(b, r)) / g;
+                        v = g;
+                    } else {
+                        h = 60 * (r - b) / (b - Math.min(g, r)) + 240;
+                        s = (b - Math.min(g, r)) / b;
+                        v = b;
+                    }
+                }
+                h = h % 360;
+                return {
+                    h: h,
+                    v: v,
+                    s: s
+                };
             };
             return Color;
         })();
