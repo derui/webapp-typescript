@@ -110,7 +110,6 @@ export class SceneImpl extends EventTargetImpl implements Scene {
 
         // タイムラインに登録する
         if (entity != null) {
-            this._correctedEntities.push(entity);
             entity.tl = animation.Anima.add(entity);;
         }
     }
@@ -131,6 +130,8 @@ export class SceneImpl extends EventTargetImpl implements Scene {
         if (entity !== null) {
             animation.Anima.remove(entity);
         }
+        // entityはどこのsceneにも属していないため、削除する。
+        entity.scene = null;
     }
 
     // 指定されたcontextに対してレンダリングを行う
@@ -399,7 +400,7 @@ export module Physics {
         remove(target: BodyBinder): void {
             if (target != null) {
                 util.remove(this._binders, target);
-                this.removeBody(target.body);
+                target.destroy(this);
             }
         }
 
@@ -436,6 +437,15 @@ export module Physics {
         constructor(target: BodyBindable, bodyDef: BodyDefinition) {
             this._target = target;
             this._bodyDef = bodyDef;
+        }
+
+        // binderが削除された時点で行う、保持する参照を切断する。
+        destroy(world : World) : void {
+            world.removeBody(this._body);
+            this._bodyDef = null;
+            this._target.body = null;
+            this._body = null;
+            this._bodyDef = null;
         }
 
         // 渡されたbodyDefinitonからbodyを生成し、生成したBodyと

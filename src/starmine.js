@@ -10,6 +10,82 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
     var gl = __gl__;
 
     var Gravity = 0.098;
+    // 実際に花火が炸裂する前に実行される、
+    var TracerLight = (function () {
+        // 始点を決定する。
+        function TracerLight(x, y) {
+            this.x = x;
+            this.y = y;
+            // 曲線を書く際に利用する点の保存数
+            this._trackingPointNum = 8;
+            // 昇るスピード
+            this._speed = 4;
+            // x座標の振幅l
+            this._sinRatio = 3.5;
+            // 曲線を書く際に利用する点
+            this._trackingPointQueue = [];
+            this._sins = [
+                0, 
+                Math.PI / 4, 
+                Math.PI / 2, 
+                Math.PI * 0.75, 
+                Math.PI, 
+                Math.PI * 1.25, 
+                Math.PI * 1.5, 
+                Math.PI * 1.75, 
+                Math.PI * 2
+            ];
+            this._prevPoint = {
+                x: x,
+                y: y
+            };
+        }
+        TracerLight.prototype.addTrackingPoint = // 軌跡の描画用点を追加する。
+        function (point) {
+            this._trackingPointQueue.push(point);
+            if(this._trackingPointQueue.length > this._trackingPointNum) {
+                this._trackingPointQueue.shift();
+            }
+        };
+        TracerLight.prototype.updateEffect = // エフェクト情報を更新する
+        function (frame) {
+            // トラッキングする点を更新する。
+            this._speed *= 0.98;
+            this.y -= this._speed;
+            // 点は、フレーム毎に正弦波での振幅を加算する。
+            var sin = this._sins[frame % this._sins.length];
+            this.addTrackingPoint({
+                x: this.x + Math.sin(sin) * this._sinRatio,
+                y: this.y
+            });
+        };
+        TracerLight.prototype.getTracerColor = function (alpha) {
+            if(Math.random() < 0.1) {
+                return new animation.Common.Color(255, 255, 150, alpha * 2);
+            } else {
+                return new animation.Common.Color(255, 255, 230, alpha);
+            }
+        };
+        TracerLight.prototype.render = function (context) {
+            var _this = this;
+            // 軌跡を描画する。
+            var c = context.context;
+            var alpha = 1.0;
+            var prevPoint = this._prevPoint;
+            c.beginPath();
+            this._trackingPointQueue.forEach(function (point) {
+                c.strokeStyle = _this.getTracerColor(alpha).toFillStyle();
+                c.lineWidth = 3;
+                c.moveTo(prevPoint.x, prevPoint.y);
+                c.lineTo(point.x, point.y);
+                c.stroke();
+                prevPoint = point;
+                alpha *= 0.8;
+            });
+            this._prevPoint = prevPoint;
+        };
+        return TracerLight;
+    })();    
     // 火花の色を管理する。
     var ColorEffect = (function () {
         function ColorEffect(baseColor) {
@@ -41,7 +117,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         ColorEffect.prototype.getStrokeColor = function () {
             var ret = new animation.Common.Color();
             ret.copy(this._color);
-            ret.a = this._alpha * 0.7;
+            ret.a = this._alpha * 0.8;
             return ret;
         };
         return ColorEffect;
@@ -73,8 +149,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             this.vx = 1 * theta * Math.cos(phai) * speed;
             this.vy = 1 * theta * Math.sin(phai) * speed;
             this.vz = 1 * rnd * speed;
-            this.data = new animation.Renderer.Box.Data(this.x, this.y, 2, 2);
-            this.data.color.r = 255;
+            this.data = new animation.Renderer.Box.Data(this.x, this.y, 4, 4);
             this.renderer = new animation.Renderer.Box.BoxRenderer(this.data);
         }
         Spark.swappingFrame = 10;
@@ -117,6 +192,8 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             c.lineTo(this.x, this.y);
             c.stroke();
             this.data.color = this._effect.getSparkColor();
+            this.data.x = this.x;
+            this.data.y = this.y;
             this.renderer.render(context);
         };
         return Spark;
@@ -129,14 +206,22 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             this.x = x;
             this.y = y;
             this._sparks = [];
+            this._renderSpark = false;
             this._colorEffect = new ColorEffect(baseColor);
-            for(var i = 0; i < 50; ++i) {
-                this._sparks.push(new Spark(x, y, 5, 300, this._colorEffect));
-            }
+            this._tracer = new TracerLight(x, y);
         }
         StarMineImpl.prototype.setup = function () {
             var _this = this;
             var frame = 0;
+            this.tl.repeat(30, function () {
+                _this._tracer.updateEffect(++frame);
+            }).then(function () {
+                frame = 0;
+                _this._renderSpark = true;
+                for(var i = 0; i < 50; ++i) {
+                    _this._sparks.push(new Spark(_this._tracer.x, _this._tracer.y, 5, 300, _this._colorEffect));
+                }
+            });
             this.tl.repeat(10, function () {
                 _this._colorEffect.updateEffect(++frame);
                 _this._sparks.forEach(function (elem) {
@@ -153,9 +238,13 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             });
         };
         StarMineImpl.prototype.render = function (context) {
-            this._sparks.forEach(function (elem) {
-                elem.render(context);
-            });
+            if(this._renderSpark) {
+                this._sparks.forEach(function (elem) {
+                    elem.render(context);
+                });
+            } else {
+                this._tracer.render(context);
+            }
         };
         return StarMineImpl;
     })(gl.BaseClasses.EntityImpl);

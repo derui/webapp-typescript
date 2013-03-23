@@ -71,7 +71,6 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
             }
             // タイムラインに登録する
             if(entity != null) {
-                this._correctedEntities.push(entity);
                 entity.tl = animation.Anima.add(entity);
                 ;
             }
@@ -91,6 +90,8 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
             if(entity !== null) {
                 animation.Anima.remove(entity);
             }
+            // entityはどこのsceneにも属していないため、削除する。
+            entity.scene = null;
         };
         SceneImpl.prototype.render = // 指定されたcontextに対してレンダリングを行う
         function (context) {
@@ -334,7 +335,7 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
             function (target) {
                 if(target != null) {
                     util.remove(this._binders, target);
-                    this.removeBody(target.body);
+                    target.destroy(this);
                 }
             };
             World.prototype.removeBody = // 指定したBodyを環境から取り除く。
@@ -385,6 +386,14 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
                 enumerable: true,
                 configurable: true
             });
+            BodyBinder.prototype.destroy = // binderが削除された時点で行う、保持する参照を切断する。
+            function (world) {
+                world.removeBody(this._body);
+                this._bodyDef = null;
+                this._target.body = null;
+                this._body = null;
+                this._bodyDef = null;
+            };
             BodyBinder.prototype.bind = // 渡されたbodyDefinitonからbodyを生成し、生成したBodyと
             // オブジェクトを結びつける。
             function (world) {

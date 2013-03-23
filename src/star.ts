@@ -118,7 +118,7 @@ class StarLogic {
         var s = this.starShape;
         var contain = scene.entities.filter((elem) => {
             if (elem === s) return false;
-            return this.starShape.within(elem, this.data.radius);
+            return s.within(elem, this.data.radius);
         });
 
         // 広がった中に存在しなければ、大きさを元に戻す。
@@ -143,8 +143,9 @@ class StarLogic {
         this.state.objectState = fw.ObjectState.PrepareLaunch;
 
         this.starShape.tl.delay(5).then(() => {
-            var mine = new starmine.StarMineImpl(this.starShape.x, this.starShape.y,
-                                                this.data.color);
+            var mine = new starmine.StarMineImpl(this.starShape.x + this.data.radius,
+                                                 this.starShape.y + this.data.radius,
+                                                 this.data.color);
             mine.enableCorrect = false;
             this.starShape.scene.addEntity(mine);
             mine.setup();
@@ -153,7 +154,6 @@ class StarLogic {
         });
         return true;
     }
-
 
     // 渡されたstarに適合するbodyの設定を作成する。
     createFixture(scale: number): gl.Physics.BodyDefinition {
@@ -190,7 +190,8 @@ module Renderer {
             grad.from(d.x + r * 0.7, d.y + r * 0.5, 1).to(d.x + r, d.y + r, r);
 
             grad.colorStop(0.0, "#fff").colorStop(0.5, d.color.toFillStyle()).
-                colorStop(1.0, "#000");
+                colorStop(0.9, "#000").
+                colorStop(1.0, "#333");
 
             d.gradient = grad;
             this._renderer.render(context);
@@ -212,7 +213,9 @@ module Renderer {
             var grad = new animation.Gradation.Radial(context);
             grad.from(d.x + r * 0.7, d.y + r * 0.5, 1).to(d.x + r, d.y + r, r);
 
-            grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
+            grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").
+                colorStop(0.9, "#000").
+                colorStop(1.0, "#333");
             d.gradient = grad;
             this._renderer.render(context);
         }

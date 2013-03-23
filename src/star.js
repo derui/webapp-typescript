@@ -137,7 +137,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
                 if(elem === s) {
                     return false;
                 }
-                return _this.starShape.within(elem, _this.data.radius);
+                return s.within(elem, _this.data.radius);
             });
             // 広がった中に存在しなければ、大きさを元に戻す。
             if(contain.length === 0) {
@@ -159,7 +159,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
             // 準備段階は終了とする
             this.state.objectState = fw.ObjectState.PrepareLaunch;
             this.starShape.tl.delay(5).then(function () {
-                var mine = new starmine.StarMineImpl(_this.starShape.x, _this.starShape.y, _this.data.color);
+                var mine = new starmine.StarMineImpl(_this.starShape.x + _this.data.radius, _this.starShape.y + _this.data.radius, _this.data.color);
                 mine.enableCorrect = false;
                 _this.starShape.scene.addEntity(mine);
                 mine.setup();
@@ -197,7 +197,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
                 var d = this.data;
                 var grad = new animation.Gradation.Radial(context);
                 grad.from(d.x + r * 0.7, d.y + r * 0.5, 1).to(d.x + r, d.y + r, r);
-                grad.colorStop(0.0, "#fff").colorStop(0.5, d.color.toFillStyle()).colorStop(1.0, "#000");
+                grad.colorStop(0.0, "#fff").colorStop(0.5, d.color.toFillStyle()).colorStop(0.9, "#000").colorStop(1.0, "#333");
                 d.gradient = grad;
                 this._renderer.render(context);
             };
@@ -214,7 +214,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
                 var d = this.data;
                 var grad = new animation.Gradation.Radial(context);
                 grad.from(d.x + r * 0.7, d.y + r * 0.5, 1).to(d.x + r, d.y + r, r);
-                grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(1.0, "#000");
+                grad.colorStop(0.0, "#fff").colorStop(0.8, "#888").colorStop(0.9, "#000").colorStop(1.0, "#333");
                 d.gradient = grad;
                 this._renderer.render(context);
             };

@@ -27,7 +27,6 @@ define(["require", "exports", "gameLib", "firework", "animation"], function(requ
         showCase.wallShapes.forEach(function (value, index, array) {
             world.addBody(array[index]);
         });
-        var blue = new animation.Common.Color(0, 0, 255);
         var rc = function () {
             var r = Math.floor(Math.random() * 256 % 255) + 1, g = Math.floor(Math.random() * 256 % 255) + 1, b = Math.floor(Math.random() * 256 % 255) + 1;
             return new animation.Common.Color(r, g, b);

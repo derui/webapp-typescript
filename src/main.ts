@@ -37,8 +37,6 @@ game.onload = (g) => {
         world.addBody(array[index]);
     });
 
-    var blue = new animation.Common.Color(0, 0, 255);
-
     var rc = () => {
         var r = Math.floor(Math.random() * 256 % 255) + 1,
         g = Math.floor(Math.random() * 256 % 255) + 1,

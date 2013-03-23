@@ -10,6 +10,85 @@ export interface StarMine extends gl.Entity {
 
 var Gravity = 0.098;
 
+// 実際に花火が炸裂する前に実行される、
+class TracerLight {
+
+    // 曲線を書く際に利用する点の保存数
+    private _trackingPointNum : number = 8;
+
+    // 昇るスピード
+    private _speed : number = 4;
+
+    // x座標の振幅l
+    private _sinRatio : number = 3.5;
+
+    // 曲線を書く際に利用する点
+    private _trackingPointQueue : {x:number;y:number;}[] = [];
+
+    private _sins : number[] = [0, Math.PI / 4, Math.PI / 2,
+                                Math.PI * 0.75, Math.PI,
+                                Math.PI * 1.25, Math.PI * 1.5,
+                                Math.PI * 1.75, Math.PI * 2];
+
+    private _prevPoint : {x:number;y:number;};
+
+    // 始点を決定する。
+    constructor(public x: number, public y:number) {
+        this._prevPoint = {x:x, y:y};
+    }
+
+    // 軌跡の描画用点を追加する。
+    addTrackingPoint(point: {x:number;y:number;}) : void {
+        this._trackingPointQueue.push(point);
+        if (this._trackingPointQueue.length > this._trackingPointNum) {
+            this._trackingPointQueue.shift();
+        }
+    }
+
+    // エフェクト情報を更新する
+    updateEffect(frame:number): void {
+        // トラッキングする点を更新する。
+        this._speed *= 0.98;
+        this.y -= this._speed;
+
+        // 点は、フレーム毎に正弦波での振幅を加算する。
+        var sin = this._sins[frame % this._sins.length];
+        this.addTrackingPoint({x:this.x + Math.sin(sin) * this._sinRatio,
+                               y:this.y});
+    }
+
+    getTracerColor(alpha) : animation.Common.Color {
+        if (Math.random() < 0.1) {
+            return new animation.Common.Color(
+                255, 255, 150, alpha * 2);
+        } else {
+            return new animation.Common.Color(
+                255, 255, 230, alpha);
+        }
+    }
+
+    render(context: animation.Context) : void {
+        // 軌跡を描画する。
+
+        var c = context.context;
+        var alpha = 1.0;
+        var prevPoint = this._prevPoint;
+        c.beginPath();
+
+        this._trackingPointQueue.forEach((point) => {
+            c.strokeStyle = this.getTracerColor(alpha).toFillStyle();
+            c.lineWidth = 3;
+            c.moveTo(prevPoint.x, prevPoint.y);
+            c.lineTo(point.x, point.y);
+            c.stroke();
+            prevPoint = point;
+            alpha *= 0.8;
+        });
+        this._prevPoint = prevPoint;
+    }
+
+}
+
 // 火花の色を管理する。
 class ColorEffect {
     // 色相として利用する値
@@ -55,7 +134,7 @@ class ColorEffect {
     getStrokeColor() : animation.Common.Color {
         var ret = new animation.Common.Color;
         ret.copy(this._color);
-        ret.a = this._alpha * 0.7;
+        ret.a = this._alpha * 0.8;
         return ret;
     }
 }
@@ -92,8 +171,7 @@ class Spark extends gl.BaseClasses.EntityImpl {
         this.vz = 1 * rnd * speed;
 
         this.data = new animation.Renderer.Box.Data(this.x, this.y,
-                                                    2, 2);
-        this.data.color.r = 255;
+                                                    4, 4);
         this.renderer = new animation.Renderer.Box.BoxRenderer(this.data);
     }
 
@@ -148,6 +226,8 @@ class Spark extends gl.BaseClasses.EntityImpl {
         c.stroke();
 
         this.data.color = this._effect.getSparkColor();
+        this.data.x = this.x;
+        this.data.y = this.y;
 
         this.renderer.render(context);
     }
@@ -159,17 +239,28 @@ export class StarMineImpl extends gl.BaseClasses.EntityImpl implements StarMine 
 
     private _sparks : Spark[] = [];
     private _colorEffect : ColorEffect;
+    private _tracer : TracerLight;
+    private _renderSpark = false;
 
     constructor(public x:number, public y:number, baseColor : animation.Common.Color) {
         super();
         this._colorEffect = new ColorEffect(baseColor);
-        for (var i = 0; i < 50; ++i) {
-            this._sparks.push(new Spark(x, y, 5, 300, this._colorEffect));
-        }
+        this._tracer = new TracerLight(x, y);
     }
 
     setup() : void {
         var frame = 0;
+        this.tl.repeat(30, () => {
+            this._tracer.updateEffect(++frame);
+        }).then(() => {
+            frame = 0;
+            this._renderSpark = true;
+            for (var i = 0; i < 50; ++i) {
+                this._sparks.push(new Spark(
+                    this._tracer.x,
+                    this._tracer.y, 5, 300, this._colorEffect));
+            }
+        });
         this.tl.repeat(10, () => {
             this._colorEffect.updateEffect(++frame);
             this._sparks.forEach((elem) => {elem.start();})}).
@@ -182,6 +273,10 @@ export class StarMineImpl extends gl.BaseClasses.EntityImpl implements StarMine 
     }
 
     render(context: animation.Context) : void {
-        this._sparks.forEach((elem) => {elem.render(context);});
+        if (this._renderSpark) {
+            this._sparks.forEach((elem) => {elem.render(context);});
+        } else {
+            this._tracer.render(context);
+        }
     }
 }
