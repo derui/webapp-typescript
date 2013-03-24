@@ -4,6 +4,7 @@
 import GL = module("gameLib");
 import Firework = module("firework");
 import animation = module("animation");
+import di = module("deviceInfo");
 var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
 
 var game = new GL.Game(240, 320);
@@ -18,12 +19,15 @@ function isContainPosition(x:number, y:number, elem:GL.Entity) : bool {
     var vec = animation.Common.Vector;
     var center = new vec.Vector2D(elem.x + elem.width / 2,
                                   elem.y + elem.height / 2);
-    var touched = new vec.Vector2D(x, y);
+    var origin = di.getOriginPoint(x, y);
+    console.log(x + " " + y + ":" + origin.x + " " + origin.y);
+    var touched = new vec.Vector2D(origin.x, origin.y);
 
     return center.sub(touched).norm() < elem.width / 2;
 }
 
 game.onload = (g) => {
+    di.initDevice();
 
     var b2Vec2 = Box2D.Common.Math.b2Vec2;
 

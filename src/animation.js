@@ -554,7 +554,6 @@ define(["require", "exports", "timeline", "util"], function(require, exports, __
                         if(!(_this.data.gradient instanceof Gradation.NullGradient)) {
                             ctx.fillStyle = _this.data.gradient.raw();
                         } else {
-                            console.log(_this.data.color.toFillStyle());
                             ctx.fillStyle = _this.data.color.toFillStyle();
                         }
                         if(_this.isFill) {

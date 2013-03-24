@@ -1,4 +1,4 @@
-define(["require", "exports", "gameLib", "firework", "animation"], function(require, exports, __GL__, __Firework__, __animation__) {
+define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"], function(require, exports, __GL__, __Firework__, __animation__, __di__) {
     /// <reference path='../lib/jquery.d.ts' />
     /// <reference path='../lib/Box2dWeb.d.ts' />
     var GL = __GL__;
@@ -7,16 +7,21 @@ define(["require", "exports", "gameLib", "firework", "animation"], function(requ
 
     var animation = __animation__;
 
+    var di = __di__;
+
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     var game = new GL.Game(240, 320);
     game.fps = 60;
     function isContainPosition(x, y, elem) {
         var vec = animation.Common.Vector;
         var center = new vec.Vector2D(elem.x + elem.width / 2, elem.y + elem.height / 2);
-        var touched = new vec.Vector2D(x, y);
+        var origin = di.getOriginPoint(x, y);
+        console.log(x + " " + y + ":" + origin.x + " " + origin.y);
+        var touched = new vec.Vector2D(origin.x, origin.y);
         return center.sub(touched).norm() < elem.width / 2;
     }
     game.onload = function (g) {
+        di.initDevice();
         var b2Vec2 = Box2D.Common.Math.b2Vec2;
         var showCase = new Firework.GameObj.StarCase(game.width, game.height);
         showCase.initialize(world.worldScale);

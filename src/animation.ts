@@ -564,7 +564,6 @@ export module Renderer {
                     if (!(this.data.gradient instanceof Gradation.NullGradient)) {
                         ctx.fillStyle = this.data.gradient.raw();
                     } else {
-                        console.log(this.data.color.toFillStyle());
                         ctx.fillStyle = this.data.color.toFillStyle();
                     }
 
