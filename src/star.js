@@ -178,6 +178,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
                     _this.data.color.r = 255;
                 }
             };
+            // 準備段階の星について、明滅する感じのエフェクトにする。
             this.starShape.tl.repeat(gl.Game.instance.fps, downFunc).repeat(gl.Game.instance.fps, upFunc).repeat(gl.Game.instance.fps, downFunc).repeat(gl.Game.instance.fps, upFunc).then(function () {
                 var mine = new starmine.StarMineImpl(_this.starShape.x + _this.data.radius, _this.starShape.y + _this.data.radius, baseColor);
                 mine.enableCorrect = false;

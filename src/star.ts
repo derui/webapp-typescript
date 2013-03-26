@@ -163,7 +163,8 @@ class StarLogic {
                 this.data.color.r = 255;
             }
         };
-        
+
+        // 準備段階の星について、明滅する感じのエフェクトにする。
         this.starShape.tl.repeat(gl.Game.instance.fps, downFunc)
             .repeat(gl.Game.instance.fps, upFunc)
             .repeat(gl.Game.instance.fps, downFunc)

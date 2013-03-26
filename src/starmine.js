@@ -40,6 +40,11 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 y: y
             };
         }
+        TracerLight.prototype.getTracerExpireFrame = // Tracerの生存フレームを返す。
+        function () {
+            var expire = Math.max(Math.random() * 60 % 60, 20);
+            return expire;
+        };
         TracerLight.prototype.addTrackingPoint = // 軌跡の描画用点を追加する。
         function (point) {
             this._trackingPointQueue.push(point);
@@ -76,12 +81,11 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
             this._trackingPointQueue.forEach(function (point) {
                 c.strokeStyle = _this.getTracerColor(alpha).toFillStyle();
                 c.lineWidth = 3;
-                c.moveTo(prevPoint.x, prevPoint.y);
                 c.lineTo(point.x, point.y);
-                c.stroke();
                 prevPoint = point;
                 alpha *= 0.8;
             });
+            c.stroke();
             this._prevPoint = prevPoint;
         };
         return TracerLight;
@@ -213,7 +217,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
         StarMineImpl.prototype.setup = function () {
             var _this = this;
             var frame = 0;
-            this.tl.repeat(30, function () {
+            this.tl.repeat(this._tracer.getTracerExpireFrame(), function () {
                 _this._tracer.updateEffect(++frame);
             }).then(function () {
                 frame = 0;
@@ -221,8 +225,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 for(var i = 0; i < 50; ++i) {
                     _this._sparks.push(new Spark(_this._tracer.x, _this._tracer.y, 5, 300, _this._colorEffect));
                 }
-            });
-            this.tl.repeat(10, function () {
+            }).repeat(10, function () {
                 _this._colorEffect.updateEffect(++frame);
                 _this._sparks.forEach(function (elem) {
                     elem.start();
@@ -232,8 +235,7 @@ define(["require", "exports", "animation", "gameLib"], function(require, exports
                 _this._sparks.forEach(function (elem) {
                     elem.end();
                 });
-            });
-            this.tl.then(function () {
+            }).then(function () {
                 _this.scene.removeEntity(_this);
             });
         };

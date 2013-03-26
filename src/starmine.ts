@@ -37,6 +37,12 @@ class TracerLight {
         this._prevPoint = {x:x, y:y};
     }
 
+    // Tracerの生存フレームを返す。
+    getTracerExpireFrame() : number {
+        var expire = Math.max(Math.random() * 60 % 60, 20);
+        return expire;
+    }
+
     // 軌跡の描画用点を追加する。
     addTrackingPoint(point: {x:number;y:number;}) : void {
         this._trackingPointQueue.push(point);
@@ -73,17 +79,18 @@ class TracerLight {
         var c = context.context;
         var alpha = 1.0;
         var prevPoint = this._prevPoint;
-        c.beginPath();
 
+        c.beginPath();
         this._trackingPointQueue.forEach((point) => {
             c.strokeStyle = this.getTracerColor(alpha).toFillStyle();
             c.lineWidth = 3;
-            c.moveTo(prevPoint.x, prevPoint.y);
+
             c.lineTo(point.x, point.y);
-            c.stroke();
             prevPoint = point;
             alpha *= 0.8;
         });
+        c.stroke();
+
         this._prevPoint = prevPoint;
     }
 
@@ -250,7 +257,7 @@ export class StarMineImpl extends gl.BaseClasses.EntityImpl implements StarMine 
 
     setup() : void {
         var frame = 0;
-        this.tl.repeat(30, () => {
+        this.tl.repeat(this._tracer.getTracerExpireFrame(), () => {
             this._tracer.updateEffect(++frame);
         }).then(() => {
             frame = 0;
@@ -260,15 +267,14 @@ export class StarMineImpl extends gl.BaseClasses.EntityImpl implements StarMine 
                     this._tracer.x,
                     this._tracer.y, 5, 300, this._colorEffect));
             }
-        });
-        this.tl.repeat(10, () => {
+        }).repeat(10, () => {
             this._colorEffect.updateEffect(++frame);
-            this._sparks.forEach((elem) => {elem.start();})}).
-            repeat(100, () => {
+            this._sparks.forEach((elem) => {elem.start();})})
+            .repeat(100, () => {
                 this._colorEffect.updateEffect(++frame);
-                this._sparks.forEach((elem) => {elem.end();})});
-        this.tl.then(() => {
-            this.scene.removeEntity(this);
+                this._sparks.forEach((elem) => {elem.end();})})
+            .then(() => {
+                this.scene.removeEntity(this);
         });
     }
 
