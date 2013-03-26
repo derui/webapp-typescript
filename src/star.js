@@ -158,8 +158,28 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
             s.body.CreateFixture(fixDef);
             // 準備段階は終了とする
             this.state.objectState = fw.ObjectState.PrepareLaunch;
-            this.starShape.tl.delay(5).then(function () {
-                var mine = new starmine.StarMineImpl(_this.starShape.x + _this.data.radius, _this.starShape.y + _this.data.radius, _this.data.color);
+            var baseColor = new animation.Common.Color();
+            baseColor.copy(this.data.color);
+            this.data.color.r = 255;
+            this.data.color.g = 40;
+            this.data.color.b = 40;
+            var ratio = 128 / gl.Game.instance.fps;
+            var downFunc = function () {
+                _this.data.color.r -= ratio;
+                _this.data.color.r = Math.floor(_this.data.color.r);
+                if(_this.data.color.r <= 128) {
+                    _this.data.color.r = 128;
+                }
+            };
+            var upFunc = function () {
+                _this.data.color.r += ratio;
+                _this.data.color.r = Math.floor(_this.data.color.r);
+                if(_this.data.color.r >= 255) {
+                    _this.data.color.r = 255;
+                }
+            };
+            this.starShape.tl.repeat(gl.Game.instance.fps, downFunc).repeat(gl.Game.instance.fps, upFunc).repeat(gl.Game.instance.fps, downFunc).repeat(gl.Game.instance.fps, upFunc).then(function () {
+                var mine = new starmine.StarMineImpl(_this.starShape.x + _this.data.radius, _this.starShape.y + _this.data.radius, baseColor);
                 mine.enableCorrect = false;
                 _this.starShape.scene.addEntity(mine);
                 mine.setup();

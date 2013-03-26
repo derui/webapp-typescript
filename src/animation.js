@@ -308,7 +308,9 @@ define(["require", "exports", "timeline", "util"], function(require, exports, __
         function Context(canvas) {
             this._width = 0;
             this._height = 0;
+            this.element = null;
             if(canvas) {
+                this.element = canvas;
                 this._context = canvas.getContext("2d");
                 this._width = canvas.width;
                 this._height = canvas.height;

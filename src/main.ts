@@ -13,7 +13,12 @@ interface DeviceMotionEvent extends Event {
     accelerationIncludingGravity: { x: number; y: number; z: number; };
 }
 
-game.fps = 60;
+// Androidかそれ以外かでfpsを変更する。
+if (di.isAndroid()) {
+    game.fps = 15;
+} else {
+    game.fps = 60;
+}
 
 function isContainPosition(x:number, y:number, elem:GL.Entity) : bool {
     var vec = animation.Common.Vector;
@@ -26,8 +31,12 @@ function isContainPosition(x:number, y:number, elem:GL.Entity) : bool {
     return center.sub(touched).norm() < elem.width / 2;
 }
 
+var gameOption = {
+    frameToGameOver : 300 * game.fps,
+}
+
 game.onload = (g) => {
-    di.initDevice();
+    di.initDevice(240, 320);
 
     var b2Vec2 = Box2D.Common.Math.b2Vec2;
 
@@ -55,9 +64,13 @@ game.onload = (g) => {
 
     var minX = showCase.leftBound, maxX = showCase.rightBound;
     var count = 0;
-    var star_count = 0;
+    var frameCount = 0;
     game.currentScene.on(GL.EventConstants.ENTER_FRAME, (e) => {
 
+        if (++frameCount === gameOption.frameToGameOver) {
+            
+        }
+        
         if (++count == game.fps) {
             count = 0;
             var star = new Firework.GameObj.Star();
@@ -75,7 +88,6 @@ game.onload = (g) => {
 
             game.currentScene.addEntity(star);
             world.add(body);
-            star_count++;
         }
 
         // 物理世界を更新する。
@@ -105,17 +117,6 @@ game.onload = (g) => {
             elem.listener.fire(GL.EventConstants.TOUCH_START, event);
         });
     });
-
-    // 10フレーム毎に星を生成する。
-    // game.rootScene.tl.then(() => {
-    //     var star = new GL.Firework.Star(16, 16);
-    //     star.setColor(rc());
-    //     star.x = Math.max(maxX * Math.random(), minX);
-    //     star.y = 0;
-    //     game.rootScene.addChild(star);
-    //     world.add(new GL.Physics.BodyBinder(
-    //         star, GL.Firework.Star.createFixture(star, world.worldScale)));
-    // }).delay(10).loop();
 
     window.addEventListener("devicemotion", (e: DeviceMotionEvent) => {
         var x = e.accelerationIncludingGravity.x;

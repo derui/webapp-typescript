@@ -11,7 +11,12 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
 
     var world = new GL.Physics.World(new Box2D.Common.Math.b2Vec2(0, 9.8));
     var game = new GL.Game(240, 320);
-    game.fps = 60;
+    // Android�������ȊO����fps���ύX�����B
+    if(di.isAndroid()) {
+        game.fps = 15;
+    } else {
+        game.fps = 60;
+    }
     function isContainPosition(x, y, elem) {
         var vec = animation.Common.Vector;
         var center = new vec.Vector2D(elem.x + elem.width / 2, elem.y + elem.height / 2);
@@ -20,8 +25,11 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
         var touched = new vec.Vector2D(origin.x, origin.y);
         return center.sub(touched).norm() < elem.width / 2;
     }
+    var gameOption = {
+        frameToGameOver: 300 * game.fps
+    };
     game.onload = function (g) {
-        di.initDevice();
+        di.initDevice(240, 320);
         var b2Vec2 = Box2D.Common.Math.b2Vec2;
         var showCase = new Firework.GameObj.StarCase(game.width, game.height);
         showCase.initialize(world.worldScale);
@@ -42,8 +50,10 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
         };
         var minX = showCase.leftBound, maxX = showCase.rightBound;
         var count = 0;
-        var star_count = 0;
+        var frameCount = 0;
         game.currentScene.on(GL.EventConstants.ENTER_FRAME, function (e) {
+            if(++frameCount === gameOption.frameToGameOver) {
+            }
             if(++count == game.fps) {
                 count = 0;
                 var star = new Firework.GameObj.Star();
@@ -59,7 +69,6 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
                 });
                 game.currentScene.addEntity(star);
                 world.add(body);
-                star_count++;
             }
             // �������E���X�V�����B
             world.step(1 / game.fps, 3, 3);
@@ -84,16 +93,6 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
                 elem.listener.fire(GL.EventConstants.TOUCH_START, event);
             });
         });
-        // 10�t���[�����ɐ��𐶐������B
-        // game.rootScene.tl.then(() => {
-        //     var star = new GL.Firework.Star(16, 16);
-        //     star.setColor(rc());
-        //     star.x = Math.max(maxX * Math.random(), minX);
-        //     star.y = 0;
-        //     game.rootScene.addChild(star);
-        //     world.add(new GL.Physics.BodyBinder(
-        //         star, GL.Firework.Star.createFixture(star, world.worldScale)));
-        // }).delay(10).loop();
         window.addEventListener("devicemotion", function (e) {
             var x = e.accelerationIncludingGravity.x;
             var y = e.accelerationIncludingGravity.y;

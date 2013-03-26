@@ -6,7 +6,8 @@ import util = module("util");
 export module Common {
 
     export class Color {
-        constructor(public r = 0, public g = 0, public b = 0, public a = 1.0) { }
+        constructor(public r : number = 0, public g :number = 0,
+                    public b :number = 0, public a : number = 1.0) { }
 
         copy(col:Color) {
             this.r = col.r;
@@ -310,6 +311,8 @@ export class Context {
     private _width: number = 0;
     private _height: number = 0;
 
+    element : HTMLCanvasElement = null;
+
     get context(): CanvasRenderingContext2D { return this._context; }
     get width(): number { return this._width; }
     get height(): number { return this._height; }
@@ -318,6 +321,7 @@ export class Context {
 
     constructor(canvas: HTMLCanvasElement) {
         if (canvas) {
+            this.element = canvas;
             this._context = canvas.getContext("2d");
             this._width = canvas.width;
             this._height = canvas.height;

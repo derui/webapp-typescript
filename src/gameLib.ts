@@ -278,12 +278,23 @@ export class Game {
     // Sceneスタックは、最低一つ必ず積まれている
     get currentScene(): Scene { return this._sceneStack[this._sceneStack.length - 1]; }
 
+    // 現在のGameインスタンス
+    static instance : Game;
+
     // game.start時に一度だけ実行される。最初のstart時にのみ呼び出されるため、
     // 一度stopしてから再度startしても実行されない
     onload: (game: Game) => void = null;
 
     constructor(public width: number, public height: number) {
 
+        Game.instance = this;
+        // レンダリング対象となるCanvasを追加する
+        this._targetContext = this.createContext(width, height);
+
+        this._sceneStack.push(new SceneImpl());
+    }
+
+    private createContext(width: number, height:number) : animation.Context {
         // レンダリング対象となるCanvasを追加する
         var elem = document.createElement("canvas");
         elem.id = this._gameCanvasId;
@@ -308,10 +319,8 @@ export class Game {
         });
 
         var canvas = <HTMLCanvasElement>elem;
-        this._targetContext = new animation.Context(canvas);
         document.body.appendChild(elem);
-
-        this._sceneStack.push(new SceneImpl());
+        return new animation.Context(canvas);
     }
 
     /**

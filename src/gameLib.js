@@ -194,7 +194,6 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
         function Game(width, height) {
             this.width = width;
             this.height = height;
-            var _this = this;
             // デフォルトのFPS
             this._fps = 30;
             this._isGameStarted = false;
@@ -205,27 +204,9 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
             // game.start時に一度だけ実行される。最初のstart時にのみ呼び出されるため、
             // 一度stopしてから再度startしても実行されない
             this.onload = null;
+            Game.instance = this;
             // レンダリング対象となるCanvasを追加する
-            var elem = document.createElement("canvas");
-            elem.id = this._gameCanvasId;
-            elem.setAttribute("width", width.toString());
-            elem.setAttribute("height", height.toString());
-            // タッチ/マウスでそれぞれ同一のハンドラを利用する
-            elem.addEventListener("touchstart", function (e) {
-                _this.currentScene.fire(EventConstants.TOUCH_START, e);
-            });
-            elem.addEventListener("mousedown", function (e) {
-                _this.currentScene.fire(EventConstants.TOUCH_START, e);
-            });
-            elem.addEventListener("mouseup", function (e) {
-                _this.currentScene.fire(EventConstants.TOUCH_END, e);
-            });
-            elem.addEventListener("touchend", function (e) {
-                _this.currentScene.fire(EventConstants.TOUCH_END, e);
-            });
-            var canvas = elem;
-            this._targetContext = new animation.Context(canvas);
-            document.body.appendChild(elem);
+            this._targetContext = this.createContext(width, height);
             this._sceneStack.push(new SceneImpl());
         }
         Object.defineProperty(Game.prototype, "fps", {
@@ -246,6 +227,30 @@ define(["require", "exports", "util", "animation"], function(require, exports, _
             enumerable: true,
             configurable: true
         });
+        Game.prototype.createContext = function (width, height) {
+            var _this = this;
+            // レンダリング対象となるCanvasを追加する
+            var elem = document.createElement("canvas");
+            elem.id = this._gameCanvasId;
+            elem.setAttribute("width", width.toString());
+            elem.setAttribute("height", height.toString());
+            // タッチ/マウスでそれぞれ同一のハンドラを利用する
+            elem.addEventListener("touchstart", function (e) {
+                _this.currentScene.fire(EventConstants.TOUCH_START, e);
+            });
+            elem.addEventListener("mousedown", function (e) {
+                _this.currentScene.fire(EventConstants.TOUCH_START, e);
+            });
+            elem.addEventListener("mouseup", function (e) {
+                _this.currentScene.fire(EventConstants.TOUCH_END, e);
+            });
+            elem.addEventListener("touchend", function (e) {
+                _this.currentScene.fire(EventConstants.TOUCH_END, e);
+            });
+            var canvas = elem;
+            document.body.appendChild(elem);
+            return new animation.Context(canvas);
+        };
         Game.prototype.start = /**
         * ゲームループを開始する。
         */

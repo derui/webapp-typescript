@@ -142,16 +142,42 @@ class StarLogic {
         // 準備段階は終了とする
         this.state.objectState = fw.ObjectState.PrepareLaunch;
 
-        this.starShape.tl.delay(5).then(() => {
-            var mine = new starmine.StarMineImpl(this.starShape.x + this.data.radius,
-                                                 this.starShape.y + this.data.radius,
-                                                 this.data.color);
-            mine.enableCorrect = false;
-            this.starShape.scene.addEntity(mine);
-            mine.setup();
+        var baseColor = new animation.Common.Color();
+        baseColor.copy(this.data.color);
+        this.data.color.r = 255;
+        this.data.color.g = 40;
+        this.data.color.b = 40;
+        var ratio = 128 / gl.Game.instance.fps;
 
-            this.starShape.scene.removeEntity(this.starShape);
-        });
+        var downFunc = () => {
+            this.data.color.r -= ratio;
+            this.data.color.r = Math.floor(this.data.color.r);
+            if (this.data.color.r <= 128) {
+                this.data.color.r = 128;
+            }
+        };
+        var upFunc = () => {
+            this.data.color.r += ratio;
+            this.data.color.r = Math.floor(this.data.color.r);
+            if (this.data.color.r >= 255) {
+                this.data.color.r = 255;
+            }
+        };
+        
+        this.starShape.tl.repeat(gl.Game.instance.fps, downFunc)
+            .repeat(gl.Game.instance.fps, upFunc)
+            .repeat(gl.Game.instance.fps, downFunc)
+            .repeat(gl.Game.instance.fps, upFunc)
+            .then(() => {
+                var mine = new starmine.StarMineImpl(this.starShape.x + this.data.radius,
+                                                     this.starShape.y + this.data.radius,
+                                                     baseColor);
+                mine.enableCorrect = false;
+                this.starShape.scene.addEntity(mine);
+                mine.setup();
+
+                this.starShape.scene.removeEntity(this.starShape);
+            });
         return true;
     }
 
@@ -236,8 +262,8 @@ module Renderer {
             var grad = new animation.Gradation.Radial(context);
             grad.from(d.x + r * 0.7, d.y + r * 0.5, 1).to(d.x + r, d.y + r, r);
 
-            grad.colorStop(0.0, d.color.toFillStyle()).
-                colorStop(1.0, d.color.toFillStyle());
+            grad.colorStop(0.0, d.color.toFillStyle())
+                .colorStop(1.0, d.color.toFillStyle());
             this.data.gradient = grad;
             this._renderer.render(context);
         }
