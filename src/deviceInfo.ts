@@ -20,7 +20,7 @@ declare var window : any;
 export function initDevice(width:number, height:number) : void {
 
     portraitWidth = $(window).width();
-    zoomRatio = portraitWidth/320;
+    zoomRatio = portraitWidth/width
     $(window).bind("resize", () => {
         if(Math.abs(window.orientation) === 0){
             if(/Android/.test(window.navigator.userAgent)){

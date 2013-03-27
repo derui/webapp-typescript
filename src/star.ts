@@ -13,7 +13,7 @@ module StarUtil {
         Large,
         Medium,
         Small,
-        VerySmall
+        VerySmall,
     }
 
     // StarSizeからランダムでいずれかを取得する
@@ -94,13 +94,12 @@ class StarLogic {
     ontouchstart(scene: gl.Scene, e: Event): bool {
         var s = this.starShape;
         if (this.state.objectState === fw.ObjectState.Connected) {
-            s.x -= s.width;
-            s.y -= s.height;
             this.data.radius *= 2;
             s.width *= 2;
             s.height *= 2;
             this.data.color.a = 0.3;
             this.state.objectState = fw.ObjectState.Touched;
+            s.zIndex = 1.0;
         }
         return true;
     }
@@ -127,6 +126,7 @@ class StarLogic {
             s.width /= 2;
             s.height /= 2;
             this.state.objectState = fw.ObjectState.Connected;
+            s.zIndex = 0;
             return false;
         }
 

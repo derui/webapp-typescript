@@ -47,19 +47,25 @@ export module GameObj {
         groundThickness: number = 10;
     }
 
+    enum WallType {
+        Left, Right, Bottom
+    }
+
     class Wall extends gl.BaseClasses.EntityImpl {
 
         private _data: animation.Renderer.Box.Data;
         private _renderer: animation.Renderer.Box.BoxRenderer;
+        private _wallType : WallType;
 
-        constructor(width: number, height: number) {
+        constructor(width: number, height: number, wallType : WallType) {
             super();
             this._data = new animation.Renderer.Box.Data(0, 0, width, height);
-            this._data.color.r = 255;
-            this._data.color.g = 255;
-            this._data.color.b = 255;
+            this._data.color.r = 0;
+            this._data.color.g = 0;
+            this._data.color.b = 0;
 
             this._renderer = new animation.Renderer.Box.BoxRenderer(this._data);
+            this._wallType = wallType;
 
             // バインドしておく
             I.propBind([I.binder("x"), I.binder("y"), I.binder("zIndex"),
@@ -68,6 +74,31 @@ export module GameObj {
         }
 
         render(context:animation.Context) : void {
+            var white = new animation.Common.Color(255, 255, 255);
+            var grad = new animation.Gradation.Linear(context);
+            switch (this._wallType) {
+            case WallType.Left:
+                grad.from(this.x, this.y + this.height / 2).to(this.x + this.width, this.y + this.height / 2);
+                grad.colorStop(0.0, this._data.color.toFillStyle())
+                    .colorStop(0.9, white.toFillStyle())
+                    .colorStop(1.0, this._data.color.toFillStyle());
+                this._data.gradient = grad;
+                break;
+            case WallType.Right:
+                grad.from(this.x, this.y + this.height / 2).to(this.x + this.width, this.y + this.height / 2);
+                grad.colorStop(0.0, white.toFillStyle())
+                    .colorStop(1.0, this._data.color.toFillStyle());
+                this._data.gradient = grad;
+                break;
+            case WallType.Bottom:
+                grad.from(this.x, this.y).to(this.x + this.width, this.y);
+                grad.colorStop(0.0, this._data.color.toFillStyle())
+                    .colorStop(0.5, white.toFillStyle())
+                    .colorStop(1.0, this._data.color.toFillStyle());
+                this._data.gradient = grad;
+                break;
+            }
+                
             this._renderer.render(context);
         }
     }
@@ -90,9 +121,9 @@ export module GameObj {
         initialize(scale: number, option? = new StarCaseOption): void {
             var sideThick = option.sideWallThickness,
             ground = option.groundThickness;
-            this.walls.push(this.createWall(0, 0, sideThick, this.height));
-            this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
-            this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
+            this.walls.push(this.createWall(0, 0, sideThick, this.height, WallType.Left));
+            this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height, WallType.Right));
+            this.walls.push(this.createWall(0, this.height - ground, this.width, ground, WallType.Bottom));
 
             // ここで作成される剛体は、見ためのSpriteの倍に相当する剛体とする
             this.wallShapes.push(
@@ -108,8 +139,8 @@ export module GameObj {
         }
 
         // 壁に相当するspriteを作る
-        private createWall(x: number, y: number, w: number, h: number): gl.Entity {
-            var p = new Wall(w, h);
+        private createWall(x: number, y: number, w: number, h: number, wallType : WallType): gl.Entity {
+            var p = new Wall(w, h, wallType);
             p.x = x;
             p.y = y;
             return p;

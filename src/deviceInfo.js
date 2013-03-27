@@ -13,7 +13,7 @@ define(["require", "exports"], function(require, exports) {
     // 状態でなければならない。
     function initDevice(width, height) {
         portraitWidth = $(window).width();
-        zoomRatio = portraitWidth / 320;
+        zoomRatio = portraitWidth / width;
         $(window).bind("resize", function () {
             if(Math.abs(window.orientation) === 0) {
                 if(/Android/.test(window.navigator.userAgent)) {

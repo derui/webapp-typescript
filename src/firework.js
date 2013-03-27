@@ -58,15 +58,26 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
             return StarCaseOption;
         })();
         GameObj.StarCaseOption = StarCaseOption;        
+        var WallType;
+        (function (WallType) {
+            WallType._map = [];
+            WallType._map[0] = "Left";
+            WallType.Left = 0;
+            WallType._map[1] = "Right";
+            WallType.Right = 1;
+            WallType._map[2] = "Bottom";
+            WallType.Bottom = 2;
+        })(WallType || (WallType = {}));
         var Wall = (function (_super) {
             __extends(Wall, _super);
-            function Wall(width, height) {
+            function Wall(width, height, wallType) {
                         _super.call(this);
                 this._data = new animation.Renderer.Box.Data(0, 0, width, height);
-                this._data.color.r = 255;
-                this._data.color.g = 255;
-                this._data.color.b = 255;
+                this._data.color.r = 0;
+                this._data.color.g = 0;
+                this._data.color.b = 0;
                 this._renderer = new animation.Renderer.Box.BoxRenderer(this._data);
+                this._wallType = wallType;
                 // �o�C���h���Ă���
                 I.propBind([
                     I.binder("x"), 
@@ -78,6 +89,25 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
                 ], this, this._data);
             }
             Wall.prototype.render = function (context) {
+                var white = new animation.Common.Color(255, 255, 255);
+                var grad = new animation.Gradation.Linear(context);
+                switch(this._wallType) {
+                    case WallType.Left:
+                        grad.from(this.x, this.y + this.height / 2).to(this.x + this.width, this.y + this.height / 2);
+                        grad.colorStop(0.0, this._data.color.toFillStyle()).colorStop(0.9, white.toFillStyle()).colorStop(1.0, this._data.color.toFillStyle());
+                        this._data.gradient = grad;
+                        break;
+                    case WallType.Right:
+                        grad.from(this.x, this.y + this.height / 2).to(this.x + this.width, this.y + this.height / 2);
+                        grad.colorStop(0.0, white.toFillStyle()).colorStop(1.0, this._data.color.toFillStyle());
+                        this._data.gradient = grad;
+                        break;
+                    case WallType.Bottom:
+                        grad.from(this.x, this.y).to(this.x + this.width, this.y);
+                        grad.colorStop(0.0, this._data.color.toFillStyle()).colorStop(0.5, white.toFillStyle()).colorStop(1.0, this._data.color.toFillStyle());
+                        this._data.gradient = grad;
+                        break;
+                }
                 this._renderer.render(context);
             };
             return Wall;
@@ -93,9 +123,9 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
             StarCase.prototype.initialize = function (scale, option) {
                 if (typeof option === "undefined") { option = new StarCaseOption(); }
                 var sideThick = option.sideWallThickness, ground = option.groundThickness;
-                this.walls.push(this.createWall(0, 0, sideThick, this.height));
-                this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height));
-                this.walls.push(this.createWall(0, this.height - ground, this.width, ground));
+                this.walls.push(this.createWall(0, 0, sideThick, this.height, WallType.Left));
+                this.walls.push(this.createWall(this.width - sideThick, 0, sideThick, this.height, WallType.Right));
+                this.walls.push(this.createWall(0, this.height - ground, this.width, ground, WallType.Bottom));
                 // �����ō쐬�����鍄�̂́A�����߂�Sprite�̔{�ɑ������鍄�̂Ƃ���
                 this.wallShapes.push(this.createShape(scale, -sideThick, 0, sideThick * 2, this.height * 2));
                 this.wallShapes.push(this.createShape(scale, this.width - sideThick, 0, sideThick * 2, this.height * 2));
@@ -105,8 +135,8 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
                 this.groundBound = this.height - ground;
             };
             StarCase.prototype.createWall = // �ǂɑ�������sprite������
-            function (x, y, w, h) {
-                var p = new Wall(w, h);
+            function (x, y, w, h, wallType) {
+                var p = new Wall(w, h, wallType);
                 p.x = x;
                 p.y = y;
                 return p;

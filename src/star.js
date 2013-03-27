@@ -113,13 +113,12 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
         function (scene, e) {
             var s = this.starShape;
             if(this.state.objectState === fw.ObjectState.Connected) {
-                s.x -= s.width;
-                s.y -= s.height;
                 this.data.radius *= 2;
                 s.width *= 2;
                 s.height *= 2;
                 this.data.color.a = 0.3;
                 this.state.objectState = fw.ObjectState.Touched;
+                s.zIndex = 1.0;
             }
             return true;
         };
@@ -145,6 +144,7 @@ define(["require", "exports", "util", "animation", "gameLib", "firework", "starm
                 s.width /= 2;
                 s.height /= 2;
                 this.state.objectState = fw.ObjectState.Connected;
+                s.zIndex = 0;
                 return false;
             }
             contain.forEach(function (elem) {
