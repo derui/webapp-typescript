@@ -18,7 +18,7 @@ if (di.isAndroid()) {
     game.fps = 15;
 } else {
     game.fps = 60;
-}
+ }
 
 function isContainPosition(x:number, y:number, elem:GL.Entity) : bool {
     var vec = animation.Common.Vector;
@@ -32,7 +32,7 @@ function isContainPosition(x:number, y:number, elem:GL.Entity) : bool {
 }
 
 var gameOption = {
-    frameToGameOver : 300 * game.fps,
+    frameToGameOver : 90 * game.fps,
 }
 
 game.onload = (g) => {
@@ -46,9 +46,13 @@ game.onload = (g) => {
         value.enableCorrect = false;
         game.currentScene.addEntity(value);
     });
+    
     showCase.wallShapes.forEach((value, index, array) => {
         world.addBody(array[index]);
     });
+
+    game.currentScene.addEntity(new Firework.GameObj.DeadLine(
+        game.width, game.height * 0.05));
 
     var rc = () => {
         var r = Math.floor(Math.random() * 256 % 255) + 1,
@@ -57,18 +61,13 @@ game.onload = (g) => {
         return new animation.Common.Color(r, g, b);
     };
 
-    var rr = () => {
-        var r = Math.floor(Math.random() * 16 % 16) + 1;
-        return Math.max(r, 12);
-    };
-
     var minX = showCase.leftBound, maxX = showCase.rightBound;
     var count = 0;
     var frameCount = 0;
     game.currentScene.on(GL.EventConstants.ENTER_FRAME, (e) => {
 
         if (++frameCount === gameOption.frameToGameOver) {
-            
+            game.pushScene(new Firework.Scenes.GameOver(game));
         }
         
         if (++count == game.fps) {
@@ -92,6 +91,7 @@ game.onload = (g) => {
 
         // •¨—¢ŠE‚ðXV‚·‚éB
         world.step(1 / game.fps, 3, 3);
+
     });
 
     game.currentScene.on(GL.EventConstants.TOUCH_END, (event: MouseEvent) => {

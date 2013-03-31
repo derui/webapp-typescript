@@ -26,7 +26,7 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
         return center.sub(touched).norm() < elem.width / 2;
     }
     var gameOption = {
-        frameToGameOver: 300 * game.fps
+        frameToGameOver: 90 * game.fps
     };
     game.onload = function (g) {
         di.initDevice(240, 320);
@@ -40,19 +40,17 @@ define(["require", "exports", "gameLib", "firework", "animation", "deviceInfo"],
         showCase.wallShapes.forEach(function (value, index, array) {
             world.addBody(array[index]);
         });
+        game.currentScene.addEntity(new Firework.GameObj.DeadLine(game.width, game.height * 0.05));
         var rc = function () {
             var r = Math.floor(Math.random() * 256 % 255) + 1, g = Math.floor(Math.random() * 256 % 255) + 1, b = Math.floor(Math.random() * 256 % 255) + 1;
             return new animation.Common.Color(r, g, b);
-        };
-        var rr = function () {
-            var r = Math.floor(Math.random() * 16 % 16) + 1;
-            return Math.max(r, 12);
         };
         var minX = showCase.leftBound, maxX = showCase.rightBound;
         var count = 0;
         var frameCount = 0;
         game.currentScene.on(GL.EventConstants.ENTER_FRAME, function (e) {
             if(++frameCount === gameOption.frameToGameOver) {
+                game.pushScene(new Firework.Scenes.GameOver(game));
             }
             if(++count == game.fps) {
                 count = 0;

@@ -31,6 +31,31 @@ export class ObjectInfo {
     constructor(public type: ObjectType) { this.objectState = ObjectState.Free; }
 }
 
+export module Scenes {
+    export class GameOver extends gl.SceneImpl {
+        x:number = 0;
+        y:number = 0;
+        
+        constructor(game: gl.Game) {
+            super();
+            this.x = game.width / 2;
+            this.y = game.height / 2 - 16;
+            this.on(gl.EventConstants.ENTER_FRAME, this.tickFrame);
+        }
+
+        tickFrame(e:Event) : void {
+        }
+
+        render(context:animation.Context) : void {
+            var c = context.context;
+            c.font = "32px Arial";
+            c.fillStyle = new animation.Common.Color(200, 200, 200).toFillStyle();
+            c.textAlign = "center";
+            c.fillText("Game Over!", this.x, this.y);
+        }
+    }
+}
+
 
 export module GameObj {
 
@@ -169,4 +194,38 @@ export module GameObj {
 
     }
 
+    // 終了地点を表す。これ自体は、表示はされるだけのEntityでしかない。
+    export class DeadLine extends gl.BaseClasses.EntityImpl {
+
+        private _data: animation.Renderer.Box.Data;
+        private _renderer: animation.Renderer.Box.BoxRenderer;
+        hasOverStar : bool = false;
+
+        constructor(public width : number, public endline : number) {
+            super();
+            this._data = new animation.Renderer.Box.Data(0, endline, width, 1);
+            this._renderer = new animation.Renderer.Box.BoxRenderer(this._data);
+            this._data.color = new animation.Common.Color(255, 0, 0, 0.7);
+            this.enableCorrect = false;
+
+            var option = new StarCaseOption;
+            this._data.x = option.sideWallThickness;
+            this._data.width = width - (option.sideWallThickness * 2);
+            this.listener.on(gl.EventConstants.ENTER_FRAME, this.onenterframe);
+        }
+
+        onenterframe(event: MouseEvent) : void {
+            var entities = this.scene.entities;
+            // 自身よりも上に存在するものが存在するかどうかを取得する
+            entities = entities.filter((elem) => {
+                return elem.y + elem.height > this._data.y;
+            });
+
+            this.hasOverStar = entities.length > 0;
+        }
+
+        render(context:animation.Context) : void {
+            this._renderer.render(context);
+        }
+    }
 }

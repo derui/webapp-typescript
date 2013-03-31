@@ -46,6 +46,31 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
         return ObjectInfo;
     })();
     exports.ObjectInfo = ObjectInfo;    
+    (function (Scenes) {
+        var GameOver = (function (_super) {
+            __extends(GameOver, _super);
+            function GameOver(game) {
+                        _super.call(this);
+                this.x = 0;
+                this.y = 0;
+                this.x = game.width / 2;
+                this.y = game.height / 2 - 16;
+                this.on(gl.EventConstants.ENTER_FRAME, this.tickFrame);
+            }
+            GameOver.prototype.tickFrame = function (e) {
+            };
+            GameOver.prototype.render = function (context) {
+                var c = context.context;
+                c.font = "32px Arial";
+                c.fillStyle = new animation.Common.Color(200, 200, 200).toFillStyle();
+                c.textAlign = "center";
+                c.fillText("Game Over!", this.x, this.y);
+            };
+            return GameOver;
+        })(gl.SceneImpl);
+        Scenes.GameOver = GameOver;        
+    })(exports.Scenes || (exports.Scenes = {}));
+    var Scenes = exports.Scenes;
     (function (GameObj) {
         GameObj.Star = star.Star;
         var StarCaseOption = (function () {
@@ -162,6 +187,38 @@ define(["require", "exports", "util", "animation", "gameLib", "star"], function(
             return StarCase;
         })();
         GameObj.StarCase = StarCase;        
+        // �I���n�_���\���B���ꎩ�̂́A�\���͂����邾����Entity�ł����Ȃ��B
+        var DeadLine = (function (_super) {
+            __extends(DeadLine, _super);
+            function DeadLine(width, endline) {
+                        _super.call(this);
+                this.width = width;
+                this.endline = endline;
+                this.hasOverStar = false;
+                this._data = new animation.Renderer.Box.Data(0, endline, width, 1);
+                this._renderer = new animation.Renderer.Box.BoxRenderer(this._data);
+                this._data.color = new animation.Common.Color(255, 0, 0, 0.7);
+                this.enableCorrect = false;
+                var option = new StarCaseOption();
+                this._data.x = option.sideWallThickness;
+                this._data.width = width - (option.sideWallThickness * 2);
+                this.listener.on(gl.EventConstants.ENTER_FRAME, this.onenterframe);
+            }
+            DeadLine.prototype.onenterframe = function (event) {
+                var _this = this;
+                var entities = this.scene.entities;
+                // ���g���������ɑ��݂������̂����݂��邩�ǂ������擾����
+                entities = entities.filter(function (elem) {
+                    return elem.y + elem.height > _this._data.y;
+                });
+                this.hasOverStar = entities.length > 0;
+            };
+            DeadLine.prototype.render = function (context) {
+                this._renderer.render(context);
+            };
+            return DeadLine;
+        })(gl.BaseClasses.EntityImpl);
+        GameObj.DeadLine = DeadLine;        
     })(exports.GameObj || (exports.GameObj = {}));
     var GameObj = exports.GameObj;
 })
